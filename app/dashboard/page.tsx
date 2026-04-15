@@ -9,8 +9,10 @@ import {
   ShieldCheck,
   Check,
   LogOut,
+  Loader2,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /* ===== Module Data ===== */
@@ -102,7 +104,9 @@ function DecorativeLeaves() {
 /* ===== Dashboard Page ===== */
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -119,12 +123,53 @@ export default function DashboardPage() {
     (e: React.MouseEvent<HTMLAnchorElement>) => {
       if (mod.id === "factory" || mod.id === "shop") {
         e.preventDefault();
+        setLoadingModuleId(null);
         setToastMessage(`${mod.name} hiện đang được phát triển.`);
+        return;
       }
+
+      e.preventDefault();
+      setToastMessage(null);
+      setLoadingModuleId(mod.id);
+      router.push(mod.href);
     };
 
   return (
     <div className="mevi-portal">
+      {loadingModuleId && (
+        <div className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-4 bg-white/80 backdrop-blur-sm">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--mevi-green-50), var(--mevi-green-100))",
+              border: "1px solid var(--mevi-border)",
+            }}
+          >
+            <Loader2
+              className="h-8 w-8 animate-spin"
+              style={{ color: "var(--mevi-green-700)" }}
+            />
+          </div>
+          <div className="text-center">
+            <p
+              className="text-sm font-semibold"
+              style={{ color: "var(--mevi-text-primary)" }}
+            >
+              Đang mở ứng dụng...
+            </p>
+            <p
+              className="mt-1 text-xs"
+              style={{ color: "var(--mevi-text-muted)" }}
+            >
+              {modules.find((mod) => mod.id === loadingModuleId)?.name ??
+                "MEVI"}{" "}
+              đang được tải
+            </p>
+          </div>
+        </div>
+      )}
+
       {toastMessage && (
         <div className="fixed right-4 top-4 z-[100] w-[calc(100%-2rem)] max-w-sm">
           <div
