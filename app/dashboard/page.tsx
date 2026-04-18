@@ -6,13 +6,10 @@ import {
   Factory,
   ShoppingBag,
   ArrowRight,
-  ShieldCheck,
-  Check,
   LogOut,
   Loader2,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /* ===== Module Data ===== */
@@ -104,7 +101,6 @@ function DecorativeLeaves() {
 /* ===== Dashboard Page ===== */
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
 
@@ -300,36 +296,6 @@ export default function DashboardPage() {
           >
             Chuỗi giá trị nông nghiệp khép kín — từ kiến thức đến thị trường
           </p>
-        </div>
-
-        {/* Mobile Flow */}
-        <div
-          className="mb-8 flex w-full max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-2 opacity-0 animate-fade-in-up delay-150 md:hidden"
-          style={{ animationFillMode: "forwards" }}
-        >
-          {modules.map((mod) => {
-            const Icon = mod.icon;
-            return (
-              <div
-                key={mod.id}
-                className="flex items-center gap-2 rounded-full px-3 py-2"
-                style={{
-                  background: "rgba(255,255,255,0.58)",
-                  border: "1px solid rgba(212, 229, 216, 0.7)",
-                }}
-              >
-                <div className={`mevi-module-icon ${mod.variant} !h-9 !w-9 !rounded-xl`}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: "var(--mevi-text-secondary)" }}
-                >
-                  {mod.name.replace("Mevi ", "")}
-                </span>
-              </div>
-            );
-          })}
         </div>
 
         {/* Connection Flow Visualization */}
