@@ -277,7 +277,7 @@ function optionIsSelected(value: SurveyAnswerValue, option: SurveyOption) {
   return false;
 }
 
-export default function SurveyPage() {
+function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -505,8 +505,7 @@ export default function SurveyPage() {
   const assignment = surveyQuery.data;
 
   return (
-    <Suspense fallback={null}>
-      <div className="mevi-portal relative min-h-dvh overflow-x-hidden overflow-y-auto">
+    <div className="mevi-portal relative min-h-dvh overflow-x-hidden overflow-y-auto">
         <DecorativeLeaves />
 
         {showSuccessModal && (
@@ -1333,6 +1332,13 @@ export default function SurveyPage() {
           </div>
         </div>
       </div>
+  );
+}
+
+export default function SurveyPage() {
+  return (
+    <Suspense fallback={null}>
+      <SurveyPageContent />
     </Suspense>
   );
 }
