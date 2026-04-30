@@ -491,7 +491,10 @@ function SurveyPageContent() {
       })),
   );
 
-  const wizardQuestions = [...introQuestions, ...apiQuestions];
+  const wizardQuestions: SurveyQuestionWithMeta[] = [
+    ...introQuestions,
+    ...apiQuestions,
+  ];
   const effectiveIndex = Math.min(
     currentIndex,
     Math.max(wizardQuestions.length - 1, 0),
@@ -499,7 +502,6 @@ function SurveyPageContent() {
   const currentQuestion = wizardQuestions[effectiveIndex];
   const currentSurveyId =
     currentQuestion &&
-    "surveyPeriodId" in currentQuestion &&
     currentQuestion.surveyPeriodId
       ? currentQuestion.surveyPeriodId
       : GENERAL_SURVEY_ID;
@@ -654,7 +656,6 @@ function SurveyPageContent() {
             className="w-full max-w-md rounded-[28px] p-6 shadow-2xl animate-fade-in-scale"
             style={{
               background: "rgba(255, 255, 255, 0.97)",
-              border: "1px solid rgba(212, 229, 216, 0.95)",
             }}
           >
             <div className="flex items-start gap-4">
@@ -710,11 +711,10 @@ function SurveyPageContent() {
       <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
           <section
-            className="overflow-hidden rounded-[32px] border shadow-sm"
+            className="overflow-hidden rounded-[32px] shadow-[0_24px_60px_-36px_rgba(6,78,59,0.22)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-34px_rgba(6,78,59,0.28)]"
             style={{
               background:
                 "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.78))",
-              borderColor: "rgba(212, 229, 216, 0.85)",
             }}
           >
             <div
@@ -722,7 +722,6 @@ function SurveyPageContent() {
               style={{
                 background:
                   "linear-gradient(135deg, rgba(236,253,245,0.9), rgba(255,247,237,0.72))",
-                borderBottom: "1px solid rgba(212, 229, 216, 0.65)",
               }}
             >
               <div className="flex flex-col gap-4">
@@ -730,11 +729,10 @@ function SurveyPageContent() {
                   <button
                     type="button"
                     onClick={handleBackToStart}
-                    className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium no-underline transition-colors hover:bg-white/70"
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium no-underline transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/80 hover:shadow-md"
                     style={{
                       color: "var(--mevi-text-secondary)",
                       background: "rgba(255,255,255,0.58)",
-                      border: "1px solid var(--mevi-border)",
                     }}
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -799,7 +797,7 @@ function SurveyPageContent() {
                   </div>
                 </div>
 
-                <div className="rounded-full border border-[rgba(212,229,216,0.8)] bg-white/70 px-3 py-2 text-xs font-semibold text-[var(--mevi-text-secondary)]">
+                <div className="rounded-full bg-white/70 px-3 py-2 text-xs font-semibold text-[var(--mevi-text-secondary)] shadow-[0_10px_30px_-24px_rgba(6,78,59,0.25)]">
                   {isLastQuestion ? "Bước cuối" : "Đang khảo sát"}
                 </div>
               </div>
@@ -817,10 +815,7 @@ function SurveyPageContent() {
           </section>
 
           {!wizardQuestions.length && (
-            <section
-              className="rounded-[28px] border bg-white/75 p-6 shadow-sm"
-              style={{ borderColor: "rgba(212, 229, 216, 0.8)" }}
-            >
+            <section className="rounded-[28px] bg-white/75 p-6 shadow-[0_18px_50px_-34px_rgba(6,78,59,0.18)]">
               <div className="flex items-center gap-3">
                 <Loader2
                   className="h-5 w-5 animate-spin"
@@ -837,11 +832,10 @@ function SurveyPageContent() {
             <section className="space-y-4">
               <article
                 key={currentQuestion.id}
-                className={`rounded-[32px] border p-5 shadow-sm sm:p-6 ${currentQuestionClass}`}
+                className={`rounded-[32px] bg-white/88 p-5 shadow-[0_24px_60px_-40px_rgba(6,78,59,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_72px_-38px_rgba(6,78,59,0.28)] sm:p-6 ${currentQuestionClass}`}
                 style={{
                   background:
                     "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82))",
-                  borderColor: "rgba(212, 229, 216, 0.85)",
                   animationFillMode: "forwards",
                 }}
               >
@@ -890,20 +884,19 @@ function SurveyPageContent() {
                   </span>
                 </div>
 
-                {"surveyPeriodName" in currentQuestion &&
-                  currentQuestion.surveyPeriodName && (
-                    <div className="mt-3">
-                      <span
-                        className="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
-                        style={{
-                          color: currentSurvey.accent,
-                          background: currentSurvey.softAccent,
-                        }}
-                      >
-                        {currentQuestion.surveyPeriodName}
-                      </span>
-                    </div>
-                  )}
+                {currentQuestion?.surveyPeriodName && (
+                  <div className="mt-3">
+                    <span
+                      className="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{
+                        color: currentSurvey.accent,
+                        background: currentSurvey.softAccent,
+                      }}
+                    >
+                      {currentQuestion.surveyPeriodName}
+                    </span>
+                  </div>
+                )}
 
                 <div className="mt-4">
                   <h3
@@ -968,16 +961,16 @@ function SurveyPageContent() {
                                 onClick={() =>
                                   updateAnswer(currentQuestion.id, option.id)
                                 }
-                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                className="group w-full rounded-[24px] border border-transparent p-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                                 style={{
                                   background: checked
                                 ? currentSurvey.softAccent
                                 : "rgba(255,255,255,0.9)",
-                                  border: checked
-                                ? `1.5px solid ${currentSurvey.accent}`
-                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  borderColor: checked
+                                ? `${currentSurvey.accent}33`
+                                : "transparent",
                                   boxShadow: checked
-                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                ? "0 22px 38px -24px rgba(6,78,59,0.34)"
                                 : "0 10px 24px -20px rgba(6,78,59,0.12)",
                                 }}
                           >
@@ -1050,16 +1043,16 @@ function SurveyPageContent() {
                                 onClick={() =>
                                   toggleMultiChoice(currentQuestion.id, option.id)
                                 }
-                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                className="group w-full rounded-[24px] border border-transparent p-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                                 style={{
                                   background: checked
                                 ? currentSurvey.softAccent
                                 : "rgba(255,255,255,0.9)",
-                                  border: checked
-                                ? `1.5px solid ${currentSurvey.accent}`
-                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  borderColor: checked
+                                ? `${currentSurvey.accent}33`
+                                : "transparent",
                                   boxShadow: checked
-                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                ? "0 22px 38px -24px rgba(6,78,59,0.34)"
                                 : "0 10px 24px -20px rgba(6,78,59,0.12)",
                                 }}
                           >
@@ -1132,7 +1125,7 @@ function SurveyPageContent() {
                                 onClick={() =>
                                   updateAnswer(currentQuestion.id, option.id)
                                 }
-                                className="w-full rounded-[24px] px-4 py-4 text-left transition-all duration-300"
+                                className="group w-full rounded-[24px] border border-transparent px-4 py-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                                 style={{
                                   color: checked
                                     ? "white"
@@ -1140,11 +1133,11 @@ function SurveyPageContent() {
                                   background: checked
                                 ? currentSurvey.accent
                                 : "rgba(255,255,255,0.9)",
-                                  border: checked
-                                ? `1.5px solid ${currentSurvey.accent}`
-                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  borderColor: checked
+                                ? `${currentSurvey.accent}33`
+                                : "transparent",
                                   boxShadow: checked
-                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                ? "0 22px 38px -24px rgba(6,78,59,0.34)"
                                 : "0 10px 24px -20px rgba(6,78,59,0.12)",
                                 }}
                           >
@@ -1202,16 +1195,16 @@ function SurveyPageContent() {
                                 onClick={() =>
                                   updateAnswer(currentQuestion.id, option.id === 1)
                                 }
-                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                className="group w-full rounded-[24px] border border-transparent p-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                                 style={{
                                   background: checked
                                 ? currentSurvey.softAccent
                                 : "rgba(255,255,255,0.9)",
-                                  border: checked
-                                ? `1.5px solid ${currentSurvey.accent}`
-                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  borderColor: checked
+                                ? `${currentSurvey.accent}33`
+                                : "transparent",
                                   boxShadow: checked
-                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                ? "0 22px 38px -24px rgba(6,78,59,0.34)"
                                 : "0 10px 24px -20px rgba(6,78,59,0.12)",
                                 }}
                           >
@@ -1273,8 +1266,7 @@ function SurveyPageContent() {
               </article>
 
               <div
-                className="flex flex-col gap-4 rounded-[28px] border bg-white/78 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                style={{ borderColor: "rgba(212, 229, 216, 0.8)" }}
+                className="flex flex-col gap-4 rounded-[28px] border border-transparent bg-white/78 p-5 shadow-[0_18px_50px_-34px_rgba(6,78,59,0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_26px_60px_-30px_rgba(6,78,59,0.24)] sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p
@@ -1297,10 +1289,9 @@ function SurveyPageContent() {
                   <button
                     type="button"
                     onClick={goBack}
-                    className="rounded-[12px] border px-5 py-3 text-sm font-semibold transition-colors hover:bg-white/80 whitespace-nowrap"
+                    className="rounded-[12px] px-5 py-3 text-sm font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md"
                     style={{
                       color: "var(--mevi-text-secondary)",
-                      borderColor: "var(--mevi-border)",
                       background: "rgba(255,255,255,0.6)",
                     }}
                   >
