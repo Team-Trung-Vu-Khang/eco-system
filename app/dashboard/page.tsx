@@ -8,11 +8,9 @@ import {
   ArrowRight,
   LogOut,
   Loader2,
-  NotebookPen,
-  ShieldCheck,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 /* ===== Module Data ===== */
@@ -104,16 +102,8 @@ function DecorativeLeaves() {
 /* ===== Dashboard Page ===== */
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
-  const [surveyPrompt, setSurveyPrompt] = useState<{
-    surveyId: number;
-    title: string;
-    message: string;
-    confirmLabel: string;
-    nextHref?: string;
-  } | null>(null);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -124,41 +114,6 @@ export default function DashboardPage() {
 
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
-
-  useEffect(() => {
-    const shouldShowWelcomeSurvey =
-      window.sessionStorage.getItem("mevi_show_welcome_survey") === "true";
-
-    if (!shouldShowWelcomeSurvey) return;
-
-    window.sessionStorage.removeItem("mevi_show_welcome_survey");
-    setSurveyPrompt({
-      surveyId: 396,
-      title: "Mời bà con làm bài khảo sát ngắn",
-      message:
-        "Để MEVI phục vụ bà con tốt hơn, mời bà con dành ít phút chia sẻ ý kiến sau khi đăng nhập. Bài khảo sát ngắn, câu hỏi dễ trả lời và chỉ thực hiện một lần.",
-      confirmLabel: "Bắt đầu khảo sát",
-    });
-  }, []);
-
-  const openSurvey = () => {
-    if (!surveyPrompt) return;
-
-    const currentPrompt = surveyPrompt;
-    setSurveyPrompt(null);
-
-    const params = new URLSearchParams({
-      surveyId: String(currentPrompt.surveyId),
-      source: currentPrompt.nextHref ? "module" : "login",
-      returnTo: "/dashboard",
-    });
-
-    if (currentPrompt.nextHref) {
-      params.set("nextHref", currentPrompt.nextHref);
-    }
-
-    router.push(`/survey?${params.toString()}`);
-  };
 
   const handleModuleClick =
     (mod: (typeof modules)[number]) =>
@@ -174,17 +129,14 @@ export default function DashboardPage() {
 
       e.preventDefault();
       setToastMessage(null);
-      setLoadingModuleId(null);
-      setSurveyPrompt({
-        surveyId: mod.id === "farm" ? 397 : 396,
-        title: `Trước khi vào ${mod.name}, mời bà con làm khảo sát ngắn`,
-        message:
-          mod.id === "farm"
-            ? "Bài khảo sát này giúp MEVI Farm sắp xếp nội dung phù hợp với nhu cầu canh tác thực tế của bà con."
-            : "Bài khảo sát này giúp MEVI hiểu rõ nhu cầu học tập và hướng dẫn kỹ thuật để hỗ trợ bà con dễ dàng hơn.",
-        confirmLabel: "Vào làm khảo sát",
-        nextHref: mod.href,
-      });
+      setLoadingModuleId(mod.id);
+
+      const targetHref = mod.href;
+      window.setTimeout(() => {
+        window.open(targetHref, "_blank", "noopener,noreferrer");
+
+        setLoadingModuleId(null);
+      }, 2000);
     };
 
   return (
@@ -274,87 +226,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {surveyPrompt && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/25 px-4 backdrop-blur-sm">
-          <div
-            className="w-full max-w-md rounded-[28px] p-6 shadow-2xl"
-            style={{
-              background: "rgba(255, 255, 255, 0.96)",
-              border: "1px solid rgba(212, 229, 216, 0.95)",
-            }}
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--mevi-green-100), var(--mevi-green-200))",
-                  color: "var(--mevi-green-700)",
-                }}
-              >
-                <NotebookPen className="h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p
-                  className="text-lg font-bold leading-7"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  {surveyPrompt.title}
-                </p>
-                <p
-                  className="mt-2 text-sm leading-6"
-                  style={{ color: "var(--mevi-text-secondary)" }}
-                >
-                  {surveyPrompt.message}
-                </p>
-              </div>
-            </div>
-
-            <div
-              className="mt-5 flex items-start gap-3 rounded-2xl px-4 py-3"
-              style={{
-                background: "rgba(236, 253, 245, 0.9)",
-                border: "1px solid rgba(167, 243, 208, 0.9)",
-              }}
-            >
-              <ShieldCheck
-                className="mt-0.5 h-4 w-4 shrink-0"
-                style={{ color: "var(--mevi-green-700)" }}
-              />
-              <p
-                className="text-sm leading-6"
-                style={{ color: "var(--mevi-text-secondary)" }}
-              >
-                Bài khảo sát ngắn gọn, dễ hiểu và giúp MEVI phục vụ bà con sát
-                thực tế hơn.
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setSurveyPrompt(null)}
-                className="rounded-2xl px-4 py-3 text-sm font-semibold"
-                style={{
-                  color: "var(--mevi-text-secondary)",
-                  background: "rgba(248, 250, 252, 0.9)",
-                  border: "1px solid rgba(212, 229, 216, 0.9)",
-                }}
-              >
-                Để sau
-              </button>
-              <button
-                type="button"
-                onClick={openSurvey}
-                className="mevi-btn-primary w-auto px-5"
-              >
-                <span>{surveyPrompt.confirmLabel}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <DecorativeLeaves />
 
       {/* Top Nav */}
@@ -400,7 +271,7 @@ export default function DashboardPage() {
             </div>
             <span className="truncate font-medium">Nguyễn Văn A</span>
           </div>
-          <a
+          <Link
             href="/"
             className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-red-50"
             style={{ color: "var(--mevi-text-muted)", textDecoration: "none" }}
@@ -408,7 +279,7 @@ export default function DashboardPage() {
           >
             <LogOut className="w-4 h-4" />
             <span>Đăng xuất</span>
-          </a>
+          </Link>
         </div>
       </nav>
 

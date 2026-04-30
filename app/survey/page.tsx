@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  ArrowRight,
   BookText,
   CheckCircle2,
   CircleDot,
@@ -10,15 +11,14 @@ import {
   Loader2,
   MessageSquareQuote,
   ShoppingBag,
+  ShieldCheck,
   SlidersHorizontal,
   Sprout,
   SquareCheckBig,
-  Tractor,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
-  type RawApiSurveyResponse,
   type SurveyAnswerValue,
   type SurveyOption,
   type SurveyQuestion,
@@ -26,7 +26,6 @@ import {
   type SurveyResultDetails,
   getDefaultAnswer,
   isAnswered,
-  mapApiSurveyResponse,
 } from "@/lib/survey";
 
 type SurveyTypeMeta = {
@@ -44,8 +43,7 @@ const surveyTypes: SurveyTypeMeta[] = [
     id: 396,
     key: "general",
     name: "Khảo sát chung",
-    description:
-      "Ghi nhận ý kiến chung để MEVI hỗ trợ bà con rõ ràng và dễ dùng hơn.",
+    description: "Ghi nhận ý kiến chung để MEVI hỗ trợ bà con rõ ràng hơn.",
     icon: BookText,
     accent: "var(--mevi-green-700)",
     softAccent: "rgba(16, 185, 129, 0.12)",
@@ -54,8 +52,7 @@ const surveyTypes: SurveyTypeMeta[] = [
     id: 397,
     key: "farm",
     name: "MEVI FARM",
-    description:
-      "Phù hợp với nhu cầu canh tác, theo dõi mùa vụ và quản lý nông trại.",
+    description: "Phù hợp với nhu cầu canh tác, theo dõi mùa vụ và nông trại.",
     icon: Sprout,
     accent: "#15803d",
     softAccent: "rgba(34, 197, 94, 0.12)",
@@ -75,117 +72,228 @@ const surveyTypes: SurveyTypeMeta[] = [
     key: "shop",
     name: "MEVI SHOP",
     description:
-      "Phù hợp với nhu cầu bán hàng, chăm sóc khách hàng và vận hành cửa hàng.",
+      "Phù hợp với nhu cầu bán hàng, chăm sóc khách hàng và vận hành.",
     icon: ShoppingBag,
     accent: "#7c3aed",
     softAccent: "rgba(168, 85, 247, 0.12)",
   },
 ];
 
-const demoQuestionsBySurvey: Record<SurveyTypeMeta["key"], SurveyQuestion[]> = {
-  general: [
-    {
-      id: 9101,
-      code: "DEMO-SINGLE",
-      content: "Bà con thấy giao diện hiện nay dễ hiểu ở mức nào?",
-      type: "single_choice",
-      options: [
-        { id: 1, label: "Rất dễ hiểu" },
-        { id: 2, label: "Khá dễ hiểu" },
-        { id: 3, label: "Tạm được" },
-        { id: 4, label: "Cần hướng dẫn thêm" },
-      ],
-      source: "demo",
-      helperText: "Câu này dùng để demo dạng chọn 1 đáp án.",
-    },
-    {
-      id: 9102,
-      code: "DEMO-MULTI",
-      content: "Bà con muốn hệ thống hỗ trợ rõ hơn ở những phần nào?",
-      type: "multiple_choice",
-      options: [
-        { id: 11, label: "Hướng dẫn từng bước" },
-        { id: 12, label: "Xem báo cáo" },
-        { id: 13, label: "Dùng trên điện thoại" },
-        { id: 14, label: "Liên hệ hỗ trợ" },
-      ],
-      source: "demo",
-      helperText: "Câu này dùng để demo dạng chọn nhiều đáp án.",
-    },
-    {
-      id: 9103,
-      code: "DEMO-RATING",
-      content: "Nếu chấm điểm mức độ thuận tiện, bà con sẽ chấm mấy điểm?",
-      type: "rating",
-      source: "demo",
-      ratingMinLabel: "Chưa thuận tiện",
-      ratingMaxLabel: "Rất thuận tiện",
-      options: Array.from({ length: 10 }, (_, index) => ({
-        id: index + 1,
-        label: String(index + 1),
-      })),
-    },
-    {
-      id: 9104,
-      code: "DEMO-YESNO",
-      content:
-        "Sau khi được hướng dẫn, bà con có thể tự thao tác các việc cơ bản không?",
-      type: "yes_no",
-      source: "demo",
-      options: [
-        { id: 1, label: "Có" },
-        { id: 0, label: "Không" },
-      ],
-    },
-  ],
-  farm: [
-    {
-      id: 9201,
-      code: "FARM-DEMO",
-      content: "Bà con muốn theo dõi phần nào rõ hơn trong MEVI Farm?",
-      type: "multiple_choice",
-      source: "demo",
-      options: [
-        { id: 21, label: "Mùa vụ" },
-        { id: 22, label: "Vật tư nông nghiệp" },
-        { id: 23, label: "Nhật ký canh tác" },
-        { id: 24, label: "Nhân công" },
-      ],
-    },
-  ],
-  factory: [
-    {
-      id: 9301,
-      code: "FACTORY-DEMO",
-      content: "Công đoạn nào trong nhà máy cần hệ thống theo dõi rõ hơn?",
-      type: "single_choice",
-      source: "demo",
-      options: [
-        { id: 31, label: "Nguyên liệu đầu vào" },
-        { id: 32, label: "Công đoạn chế biến" },
-        { id: 33, label: "Kiểm soát chất lượng" },
-        { id: 34, label: "Nhập xuất kho" },
-      ],
-    },
-  ],
-  shop: [
-    {
-      id: 9401,
-      code: "SHOP-DEMO",
-      content:
-        "Bà con có dễ theo dõi đơn hàng và khách hàng trên hệ thống không?",
-      type: "yes_no",
-      source: "demo",
-      options: [
-        { id: 1, label: "Có" },
-        { id: 0, label: "Không" },
-      ],
-    },
-  ],
-};
+const GENERAL_SURVEY_ID = 396;
+const INTRO_USER_QUESTION_ID = 8001;
 
-const EMPTY_QUESTIONS: SurveyQuestion[] = [];
-const EDU_PORTAL_URL = "https://mevi.edtexco.vn";
+const introQuestions: SurveyQuestion[] = [
+  {
+    id: INTRO_USER_QUESTION_ID,
+    code: "INTRO-USER",
+    content: "Bạn muốn giải quyết vấn đề nào nhất khi tham gia App MEVI?",
+    helperText:
+      "Bạn có thể chọn nhiều mục phù hợp nhất với nhu cầu hiện tại của mình.",
+    type: "multiple_choice",
+    source: "demo",
+    options: surveyTypes.map((survey) => ({
+      id: survey.id,
+      label: survey.name,
+      description: survey.description,
+    })),
+  },
+];
+
+function createDemoQuestion(
+  surveyPeriodId: number,
+  index: number,
+  question: Omit<SurveyQuestion, "id" | "source">,
+): SurveyQuestion {
+  return {
+    ...question,
+    id: surveyPeriodId * 100 + index + 1,
+    source: "demo",
+  };
+}
+
+const demoSurveyDetails: Record<number, SurveyResultDetails> = {
+  396: {
+    id: 396,
+    userCode: "MEVI-DEMO",
+    userName: "Người dùng demo",
+    positionName: "Khảo sát chung",
+    departmentName: "MEVI",
+    email: "mevi@gmail.com",
+    surveyPeriodId: 396,
+    surveyPeriodName: "Khảo sát chung",
+    resultQuestions: [
+      createDemoQuestion(396, 0, {
+        code: "GEN-001",
+        content: "Bạn đang quan tâm nhất đến trải nghiệm nào khi dùng MEVI?",
+        helperText: "Đây là câu demo để test flow khảo sát chung.",
+        type: "single_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Tìm thông tin nhanh" },
+          { id: 2, label: "Theo dõi quy trình" },
+          { id: 3, label: "Quản lý công việc" },
+          { id: 4, label: "Kết nối kênh bán hàng" },
+        ],
+      }),
+      createDemoQuestion(396, 1, {
+        code: "GEN-002",
+        content: "Bạn muốn MEVI hỗ trợ bạn tốt hơn ở điểm nào?",
+        helperText: "Chọn nhiều ý phù hợp nhất với nhu cầu của bạn.",
+        type: "multiple_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Giao diện dễ dùng" },
+          { id: 2, label: "Nội dung ngắn gọn" },
+          { id: 3, label: "Báo cáo rõ ràng" },
+          { id: 4, label: "Có hướng dẫn chi tiết" },
+        ],
+      }),
+      createDemoQuestion(396, 2, {
+        code: "GEN-003",
+        content: "Bạn có góp ý nào thêm cho khảo sát chung không?",
+        helperText: "Đây là ô tự luận demo.",
+        type: "essay",
+        required: false,
+      }),
+    ],
+  },
+  397: {
+    id: 397,
+    userCode: "FARM-DEMO",
+    userName: "Bà con demo Farm",
+    positionName: "MEVI FARM",
+    departmentName: "Nông trại",
+    email: "mevi@gmail.com",
+    surveyPeriodId: 397,
+    surveyPeriodName: "MEVI FARM",
+    resultQuestions: [
+      createDemoQuestion(397, 0, {
+        code: "FARM-001",
+        content: "MEVI FARM giúp bạn ở khâu nào nhiều nhất?",
+        helperText: "Câu demo cho phân hệ Farm.",
+        type: "multiple_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Nhật ký sản xuất" },
+          { id: 2, label: "Quản lý vật tư" },
+          { id: 3, label: "Theo dõi mùa vụ" },
+          { id: 4, label: "Truy xuất nguồn gốc" },
+        ],
+      }),
+      createDemoQuestion(397, 1, {
+        code: "FARM-002",
+        content: "Mức độ dễ sử dụng của Farm hiện tại thế nào?",
+        helperText: "Dữ liệu demo theo dạng rating.",
+        type: "rating",
+        required: true,
+        options: [
+          { id: 1, label: "1" },
+          { id: 2, label: "2" },
+          { id: 3, label: "3" },
+          { id: 4, label: "4" },
+          { id: 5, label: "5" },
+        ],
+        ratingMinLabel: "Khó dùng",
+        ratingMaxLabel: "Rất dễ dùng",
+      }),
+      createDemoQuestion(397, 2, {
+        code: "FARM-003",
+        content: "Bạn muốn thêm tính năng nào cho Farm?",
+        helperText: "Ô tự luận để test flow.",
+        type: "essay",
+        required: false,
+      }),
+    ],
+  },
+  398: {
+    id: 398,
+    userCode: "FACTORY-DEMO",
+    userName: "Bà con demo Factory",
+    positionName: "MEVI FACTORY",
+    departmentName: "Nhà máy",
+    email: "mevi@gmail.com",
+    surveyPeriodId: 398,
+    surveyPeriodName: "MEVI FACTORY",
+    resultQuestions: [
+      createDemoQuestion(398, 0, {
+        code: "FAC-001",
+        content: "Factory đang giúp bạn tối ưu phần nào?",
+        helperText: "Chọn một đáp án demo.",
+        type: "single_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Kiểm soát nguyên liệu" },
+          { id: 2, label: "Quản lý sản xuất" },
+          { id: 3, label: "Theo dõi chất lượng" },
+          { id: 4, label: "Xuất kho thành phẩm" },
+        ],
+      }),
+      createDemoQuestion(398, 1, {
+        code: "FAC-002",
+        content: "Bạn quan tâm nhóm tính năng nào của Factory?",
+        helperText: "Chọn nhiều mục để test checkbox.",
+        type: "multiple_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Quy trình sản xuất" },
+          { id: 2, label: "Kiểm định chất lượng" },
+          { id: 3, label: "Tối ưu công suất" },
+          { id: 4, label: "Báo cáo tồn kho" },
+        ],
+      }),
+      createDemoQuestion(398, 2, {
+        code: "FAC-003",
+        content: "Factory cần cải thiện gì trước tiên?",
+        helperText: "Ô demo tự luận.",
+        type: "essay",
+        required: false,
+      }),
+    ],
+  },
+  399: {
+    id: 399,
+    userCode: "SHOP-DEMO",
+    userName: "Bà con demo Shop",
+    positionName: "MEVI SHOP",
+    departmentName: "Bán hàng",
+    email: "mevi@gmail.com",
+    surveyPeriodId: 399,
+    surveyPeriodName: "MEVI SHOP",
+    resultQuestions: [
+      createDemoQuestion(399, 0, {
+        code: "SHOP-001",
+        content: "Shop giúp bạn tốt nhất ở điểm nào?",
+        helperText: "Câu demo cho phân hệ Shop.",
+        type: "multiple_choice",
+        required: true,
+        options: [
+          { id: 1, label: "Đa kênh bán hàng" },
+          { id: 2, label: "Quản lý đơn hàng" },
+          { id: 3, label: "Chăm sóc khách hàng" },
+          { id: 4, label: "Theo dõi doanh thu" },
+        ],
+      }),
+      createDemoQuestion(399, 1, {
+        code: "SHOP-002",
+        content: "Mức độ sẵn sàng sử dụng Shop của bạn thế nào?",
+        helperText: "Đây là dạng yes/no demo.",
+        type: "yes_no",
+        required: true,
+        options: [
+          { id: 1, label: "Có" },
+          { id: 0, label: "Chưa" },
+        ],
+      }),
+      createDemoQuestion(399, 2, {
+        code: "SHOP-003",
+        content: "Bạn mong muốn Shop thêm điều gì?",
+        helperText: "Ô tự luận để kết thúc phần demo.",
+        type: "essay",
+        required: false,
+      }),
+    ],
+  },
+};
 
 const questionTypeMeta: Record<
   SurveyQuestionType,
@@ -229,83 +337,216 @@ function DecorativeLeaves() {
   );
 }
 
-async function fetchSurveyDetails(
-  surveyPeriodId: number,
-  email: string,
-): Promise<SurveyResultDetails | null> {
-  const response = await fetch(
-    `/api/surveys/${surveyPeriodId}?email=${encodeURIComponent(email)}`,
-  );
-
-  if (!response.ok) {
-    throw new Error("Không lấy được dữ liệu khảo sát.");
-  }
-
-  const payload = (await response.json()) as RawApiSurveyResponse;
-  return mapApiSurveyResponse(payload);
-}
-
 function optionIsSelected(value: SurveyAnswerValue, option: SurveyOption) {
   if (Array.isArray(value)) return value.includes(option.id);
   if (typeof value === "number") return value === option.id;
+  if (typeof value === "boolean") return Number(value) === option.id;
   return false;
+}
+
+type SurveyQuestionWithMeta = SurveyQuestion & {
+  surveyPeriodId?: number;
+  surveyPeriodName?: string;
+  originalQuestionId?: number;
+};
+
+function PortalHeader({
+  title,
+  subtitle,
+  accent,
+}: {
+  title: string;
+  subtitle: string;
+  accent: string;
+}) {
+  return (
+    <nav className="relative z-10 flex flex-col gap-4 px-4 py-5 opacity-0 animate-fade-in-up sm:flex-row sm:items-center sm:justify-between sm:px-6 md:px-12">
+      <div className="flex items-center gap-3 self-start sm:self-auto">
+        <img
+          src="/mevi-logo.jpeg"
+          alt="MEVI"
+          className="h-10 w-10 rounded-xl object-contain shadow-sm"
+          style={{ border: "1px solid var(--mevi-border)" }}
+        />
+        <div>
+          <h1
+            className="text-lg font-bold tracking-tight"
+            style={{ color: "var(--mevi-text-primary)" }}
+          >
+            MEVI
+          </h1>
+          <p
+            className="text-[11px] font-medium leading-tight -mt-0.5 sm:text-xs"
+            style={{ color: "var(--mevi-text-muted)" }}
+          >
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
+        <div
+          className="hidden min-w-0 items-center gap-2 text-sm sm:flex"
+          style={{ color: "var(--mevi-text-secondary)" }}
+        >
+          <div
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+            }}
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <span className="truncate font-medium">Khảo sát MEVI</span>
+        </div>
+
+        <div
+          className="flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
+          style={{
+            color: accent,
+            background: "rgba(255, 255, 255, 0.78)",
+            border: "1px solid rgba(212, 229, 216, 0.9)",
+          }}
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span className="truncate">{title}</span>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function PortalFooter() {
+  return (
+    <footer
+      className="border-t border-[rgba(212,229,216,0.7)] bg-[rgba(255,255,255,0.45)] px-4 py-4 text-center backdrop-blur-xl"
+      style={{ marginTop: "auto" }}
+    >
+      <div className="mb-2 flex items-center justify-center gap-2">
+        <img
+          src="/mevi-logo.jpeg"
+          alt="MEVI"
+          className="h-6 w-6 rounded-lg object-contain"
+        />
+        <span
+          className="text-sm font-bold"
+          style={{ color: "var(--mevi-text-primary)" }}
+        >
+          MEVI
+        </span>
+      </div>
+      <p
+        className="mx-auto max-w-md text-xs leading-relaxed"
+        style={{ color: "var(--mevi-text-muted)" }}
+      >
+        © 2026 MEVI — Hệ sinh thái Nông nghiệp thông minh. Tất cả quyền được bảo
+        lưu.
+      </p>
+    </footer>
+  );
 }
 
 function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSurveyId = Number(searchParams.get("surveyId")) || 396;
-  const nextHref = searchParams.get("nextHref") ?? "";
   const returnTo = searchParams.get("returnTo") ?? "/dashboard";
   const source = searchParams.get("source") ?? "login";
-  const [selectedSurveyId, setSelectedSurveyId] =
-    useState<number>(initialSurveyId);
-  const [userEmail] = useState(() => {
-    if (typeof window === "undefined") return "mevi@gmail.com";
-
-    return window.sessionStorage.getItem("mevi_user_email") || "mevi@gmail.com";
-  });
-  const [answersBySurvey, setAnswersBySurvey] = useState<
-    Record<number, Record<number, SurveyAnswerValue>>
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [transitionDirection, setTransitionDirection] = useState<
+    "next" | "back"
+  >("next");
+  const [answersByQuestion, setAnswersByQuestion] = useState<
+    Record<number, SurveyAnswerValue>
   >({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [completionTarget, setCompletionTarget] = useState<string | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
 
-  const selectedSurvey =
-    surveyTypes.find((survey) => survey.id === selectedSurveyId) ??
-    surveyTypes[0];
+  const selectedSurveyIds = useMemo(() => {
+    const selectedValue = answersByQuestion[INTRO_USER_QUESTION_ID];
 
-  const surveyQuery = useQuery({
-    queryKey: ["survey-details", selectedSurveyId, userEmail],
-    queryFn: () => fetchSurveyDetails(selectedSurveyId, userEmail),
-    enabled: Boolean(userEmail),
-  });
+    if (Array.isArray(selectedValue) && selectedValue.length > 0) {
+      return [
+        GENERAL_SURVEY_ID,
+        ...selectedValue.filter((id) => id !== GENERAL_SURVEY_ID),
+      ];
+    }
 
-  const apiQuestions = surveyQuery.data?.resultQuestions ?? EMPTY_QUESTIONS;
-  const demoQuestions = demoQuestionsBySurvey[selectedSurvey.key];
-  const questions = useMemo(
-    () => [...apiQuestions, ...demoQuestions],
-    [apiQuestions, demoQuestions],
+    return [GENERAL_SURVEY_ID];
+  }, [answersByQuestion]);
+
+  const surveyDetails = selectedSurveyIds
+    .map((surveyPeriodId) => demoSurveyDetails[surveyPeriodId])
+    .filter((detail): detail is SurveyResultDetails => Boolean(detail));
+
+  const apiQuestions: SurveyQuestionWithMeta[] = surveyDetails.flatMap(
+    (surveyDetail) =>
+      surveyDetail.resultQuestions.map((question) => ({
+        ...question,
+        surveyPeriodId: surveyDetail.surveyPeriodId,
+        surveyPeriodName: surveyDetail.surveyPeriodName,
+        originalQuestionId: question.id,
+      })),
   );
 
-  const currentAnswers = answersBySurvey[selectedSurveyId] ?? {};
-  const getAnswerValue = (question: SurveyQuestion) =>
-    currentAnswers[question.id] ?? getDefaultAnswer(question);
-  const answeredCount = questions.filter((question) =>
+  const wizardQuestions = [...introQuestions, ...apiQuestions];
+  const effectiveIndex = Math.min(
+    currentIndex,
+    Math.max(wizardQuestions.length - 1, 0),
+  );
+  const currentQuestion = wizardQuestions[effectiveIndex];
+  const currentSurveyId =
+    currentQuestion &&
+    "surveyPeriodId" in currentQuestion &&
+    currentQuestion.surveyPeriodId
+      ? currentQuestion.surveyPeriodId
+      : GENERAL_SURVEY_ID;
+  const currentSurvey =
+    surveyTypes.find((survey) => survey.id === currentSurveyId) ??
+    surveyTypes[0];
+  const SurveyIcon = currentSurvey.icon;
+  const portalTitle = currentSurvey.name;
+
+  useEffect(() => {
+    if (!showSuccessModal || !completionTarget) return;
+
+    const timer = window.setTimeout(() => {
+      if (completionTarget.startsWith("http")) {
+        window.location.assign(completionTarget);
+        return;
+      }
+
+      router.push(completionTarget);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [completionTarget, router, showSuccessModal]);
+
+  const currentAnswers = answersByQuestion;
+  const getAnswerValue = (question: SurveyQuestion) => {
+    if (question.id === INTRO_USER_QUESTION_ID) {
+      return currentAnswers[question.id] ?? [initialSurveyId];
+    }
+
+    return currentAnswers[question.id] ?? getDefaultAnswer(question);
+  };
+
+  const answeredCount = wizardQuestions.filter((question) =>
     isAnswered(getAnswerValue(question)),
   ).length;
-  const progress = questions.length
-    ? Math.round((answeredCount / questions.length) * 100)
+
+  const progress = wizardQuestions.length
+    ? wizardQuestions.length === 1
+      ? 100
+      : Math.round((effectiveIndex / (wizardQuestions.length - 1)) * 100)
     : 0;
-  const SurveyIcon = selectedSurvey.icon;
 
   const updateAnswer = (questionId: number, value: SurveyAnswerValue) => {
-    setAnswersBySurvey((current) => ({
+    setAnswersByQuestion((current) => ({
       ...current,
-      [selectedSurveyId]: {
-        ...(current[selectedSurveyId] ?? {}),
-        [questionId]: value,
-      },
+      [questionId]: value,
     }));
   };
 
@@ -327,55 +568,53 @@ function SurveyPageContent() {
 
       return {
         answeredCount,
-        totalQuestions: questions.length,
+        totalQuestions: wizardQuestions.length,
       };
     },
     onSuccess: () => {
       setSubmitFeedback(null);
+      setCompletionTarget("/dashboard");
       setShowSuccessModal(true);
     },
     onError: (error: Error) => {
       setSubmitFeedback(
-        error.message || "Không hoàn tất được phần demo. Vui lòng thử lại.",
+        error.message || "Không hoàn tất được khảo sát. Vui lòng thử lại.",
       );
     },
   });
 
-  const questionTypeCounts = questions.reduce<
-    Record<SurveyQuestionType, number>
-  >(
-    (counts, question) => {
-      counts[question.type] += 1;
-      return counts;
-    },
-    {
-      essay: 0,
-      single_choice: 0,
-      multiple_choice: 0,
-      rating: 0,
-      yes_no: 0,
-    },
-  );
-
-  const handleSuccessConfirm = () => {
-    setShowSuccessModal(false);
-
-    if (typeof window !== "undefined") {
-      const destination = nextHref || EDU_PORTAL_URL;
-
-      if (destination.startsWith("http")) {
-        window.open(destination, "_blank", "noopener,noreferrer");
-        return;
-      }
-
-      window.open(destination, "_blank", "noopener,noreferrer");
+  const goBack = () => {
+    if (effectiveIndex === 0) {
+      router.push(returnTo);
       return;
     }
 
-    router.push(returnTo);
+    setTransitionDirection("back");
+    setSubmitFeedback(null);
+    setCurrentIndex((value) => Math.max(0, value - 1));
   };
 
-  const handleBack = () => {
+  const goNext = () => {
+    if (!currentQuestion || submitMutation.isPending) return;
+
+    const answerValue = getAnswerValue(currentQuestion);
+    if (!isAnswered(answerValue)) {
+      setSubmitFeedback("Vui lòng trả lời câu hỏi này rồi nhấn Next.");
+      return;
+    }
+
+    if (effectiveIndex === wizardQuestions.length - 1) {
+      setSubmitFeedback(null);
+      submitMutation.mutate();
+      return;
+    }
+
+    setTransitionDirection("next");
+    setSubmitFeedback(null);
+    setCurrentIndex((value) => Math.min(value + 1, wizardQuestions.length - 1));
+  };
+
+  const handleBackToStart = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
       return;
@@ -384,35 +623,35 @@ function SurveyPageContent() {
     router.push(returnTo);
   };
 
-  const handleSubmit = () => {
-    if (submitMutation.isPending) return;
+  const currentQuestionClass =
+    transitionDirection === "next"
+      ? "animate-slide-in-right"
+      : "animate-slide-in-left";
 
-    if (!questions.length) {
-      setSubmitFeedback("Chưa có câu hỏi để demo.");
-      return;
-    }
-
-    if (!answeredCount) {
-      setSubmitFeedback(
-        "Chọn hoặc nhập ít nhất một câu trả lời để demo thao tác gửi khảo sát.",
-      );
-      return;
-    }
-
-    setSubmitFeedback(null);
-    submitMutation.mutate();
-  };
-
-  const assignment = surveyQuery.data;
+  const currentQuestionNumber = Math.min(
+    effectiveIndex + 1,
+    wizardQuestions.length,
+  );
+  const isLastQuestion = effectiveIndex === wizardQuestions.length - 1;
+  const nextDisabled = submitMutation.isPending;
 
   return (
-    <div className="mevi-portal relative min-h-dvh overflow-x-hidden overflow-y-auto">
+    <div className="mevi-portal relative flex min-h-dvh flex-col overflow-hidden">
       <DecorativeLeaves />
+      <PortalHeader
+        title={portalTitle}
+        subtitle={
+          source === "module"
+            ? "Khởi động khảo sát trước khi vào phân hệ"
+            : "Đăng nhập xong là vào khảo sát ngay"
+        }
+        accent={currentSurvey.accent}
+      />
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/25 px-4 backdrop-blur-sm">
           <div
-            className="w-full max-w-md rounded-[28px] p-6 shadow-2xl"
+            className="w-full max-w-md rounded-[28px] p-6 shadow-2xl animate-fade-in-scale"
             style={{
               background: "rgba(255, 255, 255, 0.97)",
               border: "1px solid rgba(212, 229, 216, 0.95)",
@@ -440,8 +679,8 @@ function SurveyPageContent() {
                   className="mt-2 text-sm leading-6"
                   style={{ color: "var(--mevi-text-secondary)" }}
                 >
-                  Cảm ơn bà con đã chia sẻ ý kiến. Thông tin này sẽ giúp MEVI
-                  cải thiện hướng dẫn và hỗ trợ công việc thực tế tốt hơn.
+                  Cảm ơn bà con đã chia sẻ ý kiến. MEVI sẽ chuyển tiếp ngay để
+                  bạn tiếp tục công việc.
                 </p>
               </div>
             </div>
@@ -449,792 +688,654 @@ function SurveyPageContent() {
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={handleSuccessConfirm}
+                onClick={() => {
+                  if (!completionTarget) return;
+
+                  if (completionTarget.startsWith("http")) {
+                    window.location.assign(completionTarget);
+                    return;
+                  }
+
+                  router.push(completionTarget);
+                }}
                 className="mevi-btn-primary w-auto px-5"
-              >
-                <span>{nextHref ? "Xác nhận và tiếp tục" : "Xác nhận"}</span>
+                >
+                <span>Về trang chủ</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium no-underline transition-colors hover:bg-white/70"
+      <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+          <section
+            className="overflow-hidden rounded-[32px] border shadow-sm"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.78))",
+              borderColor: "rgba(212, 229, 216, 0.85)",
+            }}
+          >
+            <div
+              className="px-5 py-5 sm:px-6"
               style={{
-                color: "var(--mevi-text-secondary)",
-                background: "rgba(255,255,255,0.45)",
-                border: "1px solid var(--mevi-border)",
+                background:
+                  "linear-gradient(135deg, rgba(236,253,245,0.9), rgba(255,247,237,0.72))",
+                borderBottom: "1px solid rgba(212, 229, 216, 0.65)",
               }}
             >
-              <ArrowLeft className="h-4 w-4" />
-              {source === "module"
-                ? "Quay lại danh sách ứng dụng"
-                : "Quay lại trang chính"}
-            </button>
-
-            <div>
-              <div
-                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold"
-                style={{
-                  color: selectedSurvey.accent,
-                  background: selectedSurvey.softAccent,
-                  border: `1px solid ${selectedSurvey.softAccent}`,
-                }}
-              >
-                <SurveyIcon className="h-4 w-4" />
-                Khảo sát MEVI
-              </div>
-              <h1
-                className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl"
-                style={{ color: "var(--mevi-text-primary)" }}
-              >
-                Phiếu khảo sát đầy đủ, dễ trả lời
-              </h1>
-              <p
-                className="mt-3 max-w-2xl text-sm leading-6 sm:text-base"
-                style={{ color: "var(--mevi-text-secondary)" }}
-              >
-                Dữ liệu thật đang được lấy từ API theo email đăng nhập. Bên dưới
-                vẫn có thêm phần demo để bạn xem đủ nhiều loại câu hỏi.
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="rounded-3xl px-4 py-4 shadow-sm"
-            style={{
-              background: "rgba(255,255,255,0.68)",
-              border: "1px solid rgba(212, 229, 216, 0.8)",
-              minWidth: "280px",
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-2xl text-white"
-                style={{
-                  background:
-                    "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
-                }}
-              >
-                <Tractor className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p
-                  className="truncate text-sm font-semibold"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  {assignment?.userName || "Tài khoản khảo sát"}
-                </p>
-                <p
-                  className="text-xs"
-                  style={{ color: "var(--mevi-text-muted)" }}
-                >
-                  {(assignment?.userCode || "MEVI") +
-                    (assignment?.positionName
-                      ? ` • ${assignment.positionName}`
-                      : "")}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <p style={{ color: "var(--mevi-text-muted)" }}>Phòng ban</p>
-                <p
-                  className="mt-1 font-medium"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  {assignment?.departmentName || "Đang cập nhật"}
-                </p>
-              </div>
-              <div>
-                <p style={{ color: "var(--mevi-text-muted)" }}>Email</p>
-                <p
-                  className="mt-1 break-all font-medium"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  {assignment?.email || userEmail}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1.15fr_2fr]">
-          <section
-            className="self-start rounded-[28px] p-5 shadow-sm lg:sticky lg:top-4"
-            style={{
-              background: "rgba(255,255,255,0.72)",
-              border: "1px solid rgba(212, 229, 216, 0.8)",
-            }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  Loại khảo sát
-                </p>
-                <p
-                  className="mt-1 text-xs"
-                  style={{ color: "var(--mevi-text-muted)" }}
-                >
-                  Chọn nhóm phù hợp để xem đúng bộ câu hỏi cần dùng
-                </p>
-              </div>
-              <div
-                className="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
-                style={{
-                  color: "var(--mevi-green-700)",
-                  background: "rgba(16, 185, 129, 0.1)",
-                }}
-              >
-                {progress}% hoàn thành
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3">
-              {surveyTypes.map((survey) => {
-                const Icon = survey.icon;
-                const isActive = survey.id === selectedSurveyId;
-
-                return (
+              <div className="flex flex-col gap-4">
+                <div className="space-x-3 space-y-3">
                   <button
-                    key={survey.id}
                     type="button"
-                    onClick={() => setSelectedSurveyId(survey.id)}
-                    className="rounded-2xl p-4 text-left transition-all"
+                    onClick={handleBackToStart}
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium no-underline transition-colors hover:bg-white/70"
                     style={{
-                      background: isActive
-                        ? survey.softAccent
-                        : "rgba(255,255,255,0.6)",
-                      border: isActive
-                        ? `1.5px solid ${survey.accent}`
-                        : "1px solid rgba(212, 229, 216, 0.85)",
+                      color: "var(--mevi-text-secondary)",
+                      background: "rgba(255,255,255,0.58)",
+                      border: "1px solid var(--mevi-border)",
                     }}
                   >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
-                        style={{
-                          background: isActive
-                            ? survey.accent
-                            : survey.softAccent,
-                          color: isActive ? "#fff" : survey.accent,
-                        }}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p
-                            className="text-sm font-semibold"
-                            style={{ color: "var(--mevi-text-primary)" }}
-                          >
-                            {survey.name}
-                          </p>
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                            style={{
-                              color: survey.accent,
-                              background: survey.softAccent,
-                            }}
-                          >
-                            {survey.id}
-                          </span>
-                        </div>
-                        <p
-                          className="mt-1 text-xs leading-5"
-                          style={{ color: "var(--mevi-text-secondary)" }}
-                        >
-                          {survey.description}
-                        </p>
-                      </div>
-                    </div>
+                    <ArrowLeft className="h-4 w-4" />
+                    {source === "module"
+                      ? "Quay lại phân hệ"
+                      : "Quay lại trang trước"}
                   </button>
-                );
-              })}
-            </div>
 
-            <div
-              className="mt-5 rounded-2xl p-4"
-              style={{
-                background: "rgba(248, 250, 252, 0.82)",
-                border: "1px solid rgba(212, 229, 216, 0.8)",
-              }}
-            >
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--mevi-text-primary)" }}
-              >
-                Các dạng câu hỏi trong màn hình này
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(Object.keys(questionTypeMeta) as SurveyQuestionType[]).map(
-                  (type) => {
-                    const meta = questionTypeMeta[type];
-                    const Icon = meta.icon;
-                    const count = questionTypeCounts[type];
-
-                    return (
-                      <span
-                        key={type}
-                        className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium"
-                        style={{
-                          color: "var(--mevi-text-secondary)",
-                          background: count
-                            ? "rgba(16, 185, 129, 0.08)"
-                            : "rgba(148, 163, 184, 0.08)",
-                        }}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {meta.label}
-                        <strong style={{ color: "var(--mevi-text-primary)" }}>
-                          {count}
-                        </strong>
-                      </span>
-                    );
-                  },
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="space-y-5">
-            <div
-              className="rounded-[28px] p-5 shadow-sm sm:p-6"
-              style={{
-                background: "rgba(255,255,255,0.78)",
-                border: "1px solid rgba(212, 229, 216, 0.8)",
-              }}
-            >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div>
                   <div
-                    className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
                     style={{
-                      color: selectedSurvey.accent,
-                      background: selectedSurvey.softAccent,
+                      color: currentSurvey.accent,
+                      background: currentSurvey.softAccent,
                     }}
                   >
                     <SurveyIcon className="h-3.5 w-3.5" />
-                    {selectedSurvey.name}
+                    Khảo sát MEVI
                   </div>
-                  <h2
-                    className="mt-3 text-2xl font-bold"
-                    style={{ color: "var(--mevi-text-primary)" }}
-                  >
-                    Nội dung khảo sát
-                  </h2>
-                  <p
-                    className="mt-2 max-w-2xl text-sm leading-6"
-                    style={{ color: "var(--mevi-text-secondary)" }}
-                  >
-                    Câu hỏi thực từ API sẽ hiển thị trước. Các câu demo thêm
-                    phía sau dùng để xem đủ giao diện nhiều loại câu hỏi.
-                  </p>
-                </div>
 
-                <div className="grid w-full grid-cols-3 gap-3 text-center sm:max-w-sm lg:w-auto lg:min-w-[220px]">
-                  <div
-                    className="rounded-2xl px-3 py-3"
-                    style={{ background: "rgba(16, 185, 129, 0.08)" }}
-                  >
-                    <p
-                      className="text-lg font-bold"
+                  <div>
+                    <h2
+                      className="max-w-2xl text-3xl font-extrabold tracking-tight sm:text-4xl"
                       style={{ color: "var(--mevi-text-primary)" }}
                     >
-                      {questions.length}
-                    </p>
+                      {currentSurvey.name}
+                    </h2>
                     <p
-                      className="mt-1 text-[11px] leading-4"
-                      style={{ color: "var(--mevi-text-muted)" }}
+                      className="mt-2 max-w-2xl text-sm leading-6 sm:text-base"
+                      style={{ color: "var(--mevi-text-secondary)" }}
                     >
-                      Câu hỏi
-                    </p>
-                  </div>
-                  <div
-                    className="rounded-2xl px-3 py-3"
-                    style={{ background: "rgba(59, 130, 246, 0.08)" }}
-                  >
-                    <p
-                      className="text-lg font-bold"
-                      style={{ color: "var(--mevi-text-primary)" }}
-                    >
-                      {answeredCount}
-                    </p>
-                    <p
-                      className="mt-1 text-[11px] leading-4"
-                      style={{ color: "var(--mevi-text-muted)" }}
-                    >
-                      Đã trả lời
-                    </p>
-                  </div>
-                  <div
-                    className="rounded-2xl px-3 py-3"
-                    style={{ background: selectedSurvey.softAccent }}
-                  >
-                    <p
-                      className="text-lg font-bold"
-                      style={{ color: "var(--mevi-text-primary)" }}
-                    >
-                      {selectedSurvey.id}
-                    </p>
-                    <p
-                      className="mt-1 text-[11px] leading-4"
-                      style={{ color: "var(--mevi-text-muted)" }}
-                    >
-                      Survey ID
+                      {currentSurvey.description}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-[rgba(212,229,216,0.8)]">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${progress}%`,
-                    background: `linear-gradient(90deg, ${selectedSurvey.accent}, var(--mevi-green-500))`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {surveyQuery.isLoading && (
-              <div
-                className="rounded-[26px] p-6 shadow-sm"
-                style={{
-                  background: "rgba(255,255,255,0.78)",
-                  border: "1px solid rgba(212, 229, 216, 0.8)",
-                }}
-              >
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <Loader2
-                    className="h-5 w-5 animate-spin"
-                    style={{ color: "var(--mevi-green-700)" }}
-                  />
-                  <p style={{ color: "var(--mevi-text-secondary)" }}>
-                    Đang lấy câu hỏi khảo sát từ hệ thống...
-                  </p>
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-2xl"
+                    style={{ background: currentSurvey.softAccent }}
+                  >
+                    <SurveyIcon
+                      className="h-5 w-5"
+                      style={{ color: currentSurvey.accent }}
+                    />
+                  </div>
+                  <div>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--mevi-text-primary)" }}
+                    >
+                      Câu {currentQuestionNumber} /{" "}
+                      {wizardQuestions.length || 1}
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--mevi-text-muted)" }}
+                    >
+                      {answeredCount} câu đã trả lời
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-full border border-[rgba(212,229,216,0.8)] bg-white/70 px-3 py-2 text-xs font-semibold text-[var(--mevi-text-secondary)]">
+                  {isLastQuestion ? "Bước cuối" : "Đang khảo sát"}
                 </div>
               </div>
-            )}
 
-            {surveyQuery.isError && (
-              <div
-                className="rounded-[26px] p-6 shadow-sm"
-                style={{
-                  background: "rgba(255,255,255,0.78)",
-                  border: "1px solid rgba(254, 202, 202, 0.9)",
-                }}
-              >
-                <p className="font-semibold" style={{ color: "#b91c1c" }}>
-                  Không lấy được dữ liệu khảo sát từ API.
-                </p>
-                <p
-                  className="mt-2 text-sm"
-                  style={{ color: "var(--mevi-text-secondary)" }}
-                >
-                  Trang vẫn hiển thị phần demo giao diện để bạn tiếp tục kiểm
-                  tra.
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[rgba(212,229,216,0.8)]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${progress}%`,
+                      background: `linear-gradient(90deg, ${currentSurvey.accent}, var(--mevi-green-500))`,
+                    }}
+                  />
+                </div>
+            </div>
+          </section>
+
+          {!wizardQuestions.length && (
+            <section
+              className="rounded-[28px] border bg-white/75 p-6 shadow-sm"
+              style={{ borderColor: "rgba(212, 229, 216, 0.8)" }}
+            >
+              <div className="flex items-center gap-3">
+                <Loader2
+                  className="h-5 w-5 animate-spin"
+                  style={{ color: "var(--mevi-green-700)" }}
+                />
+                <p style={{ color: "var(--mevi-text-secondary)" }}>
+                  Đang tải câu hỏi khảo sát...
                 </p>
               </div>
-            )}
+            </section>
+          )}
 
-            <div className="space-y-4">
-              {questions.map((question, index) => {
-                const meta = questionTypeMeta[question.type];
-                const Icon = meta.icon;
-                const answerValue = getAnswerValue(question);
-                const answered = isAnswered(answerValue);
-
-                return (
-                  <article
-                    key={question.id}
-                    className="rounded-[26px] p-5 shadow-sm sm:p-6"
+          {wizardQuestions.length > 0 && currentQuestion && (
+            <section className="space-y-4">
+              <article
+                key={currentQuestion.id}
+                className={`rounded-[32px] border p-5 shadow-sm sm:p-6 ${currentQuestionClass}`}
+                style={{
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.82))",
+                  borderColor: "rgba(212, 229, 216, 0.85)",
+                  animationFillMode: "forwards",
+                }}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
                     style={{
-                      background: "rgba(255,255,255,0.76)",
-                      border: "1px solid rgba(212, 229, 216, 0.8)",
+                      color: currentSurvey.accent,
+                      background: currentSurvey.softAccent,
                     }}
                   >
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className="rounded-full px-3 py-1 text-xs font-semibold"
-                          style={{
-                            color: selectedSurvey.accent,
-                            background: selectedSurvey.softAccent,
-                          }}
-                        >
-                          Câu {index + 1}
-                        </span>
-                        <span
-                          className="rounded-full px-3 py-1 text-xs font-semibold"
-                          style={{
-                            color: "var(--mevi-text-muted)",
-                            background: "rgba(148, 163, 184, 0.12)",
-                          }}
-                        >
-                          {question.code}
-                        </span>
-                        <span
-                          className="rounded-full px-3 py-1 text-xs font-semibold"
-                          style={{
-                            color: answered
-                              ? "var(--mevi-green-700)"
-                              : "var(--mevi-earth-700)",
-                            background: answered
-                              ? "rgba(16, 185, 129, 0.12)"
-                              : "rgba(245, 158, 11, 0.14)",
-                          }}
-                        >
-                          {answered ? "Đã trả lời" : "Chưa trả lời"}
-                        </span>
-                        {question.source === "demo" && (
-                          <span
-                            className="rounded-full px-3 py-1 text-xs font-semibold"
-                            style={{
-                              color: "#6366f1",
-                              background: "rgba(99, 102, 241, 0.12)",
-                            }}
-                          >
-                            Demo giao diện
-                          </span>
-                        )}
-                        <span
-                          className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
-                          style={{
-                            color: selectedSurvey.accent,
-                            background: selectedSurvey.softAccent,
-                          }}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {meta.label}
-                        </span>
-                      </div>
+                    Câu {effectiveIndex + 1}
+                  </span>
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                      color: "var(--mevi-text-muted)",
+                      background: "rgba(148, 163, 184, 0.12)",
+                    }}
+                  >
+                    {currentQuestion.code}
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                      color: currentSurvey.accent,
+                      background: currentSurvey.softAccent,
+                    }}
+                  >
+                    {questionTypeMeta[currentQuestion.type].label}
+                  </span>
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                      color: isAnswered(getAnswerValue(currentQuestion))
+                        ? "var(--mevi-green-700)"
+                        : "var(--mevi-earth-700)",
+                      background: isAnswered(getAnswerValue(currentQuestion))
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : "rgba(245, 158, 11, 0.14)",
+                    }}
+                  >
+                    {isAnswered(getAnswerValue(currentQuestion))
+                      ? "Đã trả lời"
+                      : "Chưa trả lời"}
+                  </span>
+                </div>
 
-                      <div className="min-w-0">
-                        <h3
-                          className="text-lg font-semibold leading-8"
-                          style={{ color: "var(--mevi-text-primary)" }}
-                        >
-                          {question.content}
-                        </h3>
-                        {question.helperText && (
-                          <p
-                            className="mt-2 text-sm leading-6"
-                            style={{ color: "var(--mevi-text-muted)" }}
+                {"surveyPeriodName" in currentQuestion &&
+                  currentQuestion.surveyPeriodName && (
+                    <div className="mt-3">
+                      <span
+                        className="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+                        style={{
+                          color: currentSurvey.accent,
+                          background: currentSurvey.softAccent,
+                        }}
+                      >
+                        {currentQuestion.surveyPeriodName}
+                      </span>
+                    </div>
+                  )}
+
+                <div className="mt-4">
+                  <h3
+                    className="text-[1.75rem] font-bold leading-[1.25] sm:text-[2rem]"
+                    style={{ color: "var(--mevi-text-primary)" }}
+                  >
+                    {currentQuestion.content}
+                  </h3>
+                  {currentQuestion.helperText && (
+                    <p
+                      className="mt-2 max-w-2xl text-sm leading-6"
+                      style={{ color: "var(--mevi-text-muted)" }}
+                    >
+                      {currentQuestion.helperText}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {currentQuestion.type === "essay" && (
+                    <>
+                      <label
+                        htmlFor={`question-${currentQuestion.id}`}
+                        className="block text-sm font-medium"
+                        style={{ color: "var(--mevi-text-secondary)" }}
+                      >
+                        Câu trả lời
+                      </label>
+                      <textarea
+                        id={`question-${currentQuestion.id}`}
+                        value={
+                          typeof getAnswerValue(currentQuestion) === "string"
+                            ? (getAnswerValue(currentQuestion) as string)
+                            : ""
+                        }
+                        onChange={(event) =>
+                          updateAnswer(currentQuestion.id, event.target.value)
+                        }
+                        placeholder="Bà con nhập câu trả lời tại đây..."
+                        className="min-h-36 w-full resize-y rounded-[24px] px-4 py-4 text-sm outline-none transition-all"
+                        style={{
+                          color: "var(--mevi-text-primary)",
+                          background: "rgba(255,255,255,0.92)",
+                          border: "1.5px solid var(--mevi-border)",
+                        }}
+                      />
+                    </>
+                  )}
+
+                  {currentQuestion.type === "single_choice" && (
+                    <div className="space-y-3">
+                      {currentQuestion.options?.map((option, index) => {
+                        const checked = optionIsSelected(
+                          getAnswerValue(currentQuestion),
+                          option,
+                        );
+
+                        return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() =>
+                                  updateAnswer(currentQuestion.id, option.id)
+                                }
+                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                style={{
+                                  background: checked
+                                ? currentSurvey.softAccent
+                                : "rgba(255,255,255,0.9)",
+                                  border: checked
+                                ? `1.5px solid ${currentSurvey.accent}`
+                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  boxShadow: checked
+                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                : "0 10px 24px -20px rgba(6,78,59,0.12)",
+                                }}
                           >
-                            {question.helperText}
-                          </p>
-                        )}
+                            <div className="flex items-center gap-4">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  style={{
+                                    background: checked
+                                    ? currentSurvey.accent
+                                    : "rgba(236,253,245,0.75)",
+                                  color: checked
+                                    ? "white"
+                                    : currentSurvey.accent,
+                                  }}
+                                >
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className="text-[15px] font-semibold leading-6"
+                                  style={{ color: "var(--mevi-text-primary)" }}
+                                >
+                                  {option.label}
+                                </p>
+                                {option.description && (
+                                  <p
+                                    className="mt-1 text-sm leading-6"
+                                    style={{
+                                      color: "var(--mevi-text-muted)",
+                                    }}
+                                  >
+                                    {option.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div
+                                className="flex h-5 w-5 items-center justify-center rounded-full border"
+                                style={{
+                                  borderColor: checked
+                                    ? currentSurvey.accent
+                                    : "var(--mevi-border)",
+                                  background: checked
+                                    ? currentSurvey.accent
+                                    : "white",
+                                }}
+                              >
+                                {checked && (
+                                  <div className="h-2 w-2 rounded-full bg-white" />
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {currentQuestion.type === "multiple_choice" && (
+                    <div className="space-y-3">
+                      {currentQuestion.options?.map((option, index) => {
+                        const checked = optionIsSelected(
+                          getAnswerValue(currentQuestion),
+                          option,
+                        );
+
+                        return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() =>
+                                  toggleMultiChoice(currentQuestion.id, option.id)
+                                }
+                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                style={{
+                                  background: checked
+                                ? currentSurvey.softAccent
+                                : "rgba(255,255,255,0.9)",
+                                  border: checked
+                                ? `1.5px solid ${currentSurvey.accent}`
+                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  boxShadow: checked
+                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                : "0 10px 24px -20px rgba(6,78,59,0.12)",
+                                }}
+                          >
+                            <div className="flex items-center gap-4">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  style={{
+                                    background: checked
+                                    ? currentSurvey.accent
+                                    : "rgba(236,253,245,0.75)",
+                                  color: checked
+                                    ? "white"
+                                    : currentSurvey.accent,
+                                  }}
+                                >
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className="text-[15px] font-semibold leading-6"
+                                  style={{ color: "var(--mevi-text-primary)" }}
+                                >
+                                  {option.label}
+                                </p>
+                                {option.description && (
+                                  <p
+                                    className="mt-1 text-sm leading-6"
+                                    style={{
+                                      color: "var(--mevi-text-muted)",
+                                    }}
+                                  >
+                                    {option.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div
+                                className="flex h-5 w-5 items-center justify-center rounded-md border text-white"
+                                style={{
+                                  borderColor: checked
+                                    ? currentSurvey.accent
+                                    : "var(--mevi-border)",
+                                  background: checked
+                                    ? currentSurvey.accent
+                                    : "white",
+                                }}
+                              >
+                                {checked && (
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {currentQuestion.type === "rating" && (
+                    <div className="space-y-3">
+                      {(currentQuestion.options ?? []).map((option, index) => {
+                        const checked = optionIsSelected(
+                          getAnswerValue(currentQuestion),
+                          option,
+                        );
+
+                        return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() =>
+                                  updateAnswer(currentQuestion.id, option.id)
+                                }
+                                className="w-full rounded-[24px] px-4 py-4 text-left transition-all duration-300"
+                                style={{
+                                  color: checked
+                                    ? "white"
+                                    : "var(--mevi-text-primary)",
+                                  background: checked
+                                ? currentSurvey.accent
+                                : "rgba(255,255,255,0.9)",
+                                  border: checked
+                                ? `1.5px solid ${currentSurvey.accent}`
+                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  boxShadow: checked
+                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                : "0 10px 24px -20px rgba(6,78,59,0.12)",
+                                }}
+                          >
+                            <div className="flex items-center gap-4">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  style={{
+                                    background: checked
+                                    ? "rgba(255,255,255,0.18)"
+                                    : currentSurvey.softAccent,
+                                  color: checked
+                                    ? "white"
+                                    : currentSurvey.accent,
+                                  }}
+                                >
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[15px] font-semibold leading-6">
+                                  {option.label}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                      <div
+                        className="flex items-center justify-between text-xs"
+                        style={{ color: "var(--mevi-text-muted)" }}
+                      >
+                        <span>{currentQuestion.ratingMinLabel || "Thấp"}</span>
+                        <span>{currentQuestion.ratingMaxLabel || "Cao"}</span>
                       </div>
                     </div>
+                  )}
 
-                    <div className="mt-5">
-                      {question.type === "essay" && (
-                        <>
-                          <label
-                            htmlFor={`question-${question.id}`}
-                            className="mb-2 block text-sm font-medium"
-                            style={{ color: "var(--mevi-text-secondary)" }}
-                          >
-                            Câu trả lời của bà con
-                          </label>
-                          <textarea
-                            id={`question-${question.id}`}
-                            value={
-                              typeof answerValue === "string" ? answerValue : ""
-                            }
-                            onChange={(event) =>
-                              updateAnswer(question.id, event.target.value)
-                            }
-                            placeholder="Bà con nhập câu trả lời tại đây..."
-                            className="min-h-36 w-full resize-y rounded-3xl px-4 py-4 text-sm outline-none transition-all"
-                            style={{
-                              color: "var(--mevi-text-primary)",
-                              background: "rgba(255,255,255,0.86)",
-                              border: "1.5px solid var(--mevi-border)",
-                            }}
-                          />
-                        </>
-                      )}
-
-                      {question.type === "single_choice" && (
-                        <div className="grid gap-3">
-                          {question.options?.map((option) => {
-                            const checked = optionIsSelected(
-                              answerValue,
-                              option,
-                            );
-
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                onClick={() =>
-                                  updateAnswer(question.id, option.id)
-                                }
-                                className="rounded-2xl p-4 text-left transition-all"
-                                style={{
-                                  background: checked
-                                    ? selectedSurvey.softAccent
-                                    : "rgba(255,255,255,0.82)",
-                                  border: checked
-                                    ? `1.5px solid ${selectedSurvey.accent}`
-                                    : "1px solid rgba(212, 229, 216, 0.85)",
-                                }}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div
-                                    className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border"
-                                    style={{
-                                      borderColor: checked
-                                        ? selectedSurvey.accent
-                                        : "var(--mevi-border)",
-                                      background: checked
-                                        ? selectedSurvey.accent
-                                        : "white",
-                                    }}
-                                  >
-                                    {checked && (
-                                      <div className="h-2 w-2 rounded-full bg-white" />
-                                    )}
-                                  </div>
-                                  <p
-                                    className="text-sm font-medium"
-                                    style={{
-                                      color: "var(--mevi-text-primary)",
-                                    }}
-                                  >
-                                    {option.label}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {question.type === "multiple_choice" && (
-                        <div className="grid gap-3">
-                          {question.options?.map((option) => {
-                            const checked = optionIsSelected(
-                              answerValue,
-                              option,
-                            );
-
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                onClick={() =>
-                                  toggleMultiChoice(question.id, option.id)
-                                }
-                                className="rounded-2xl p-4 text-left transition-all"
-                                style={{
-                                  background: checked
-                                    ? selectedSurvey.softAccent
-                                    : "rgba(255,255,255,0.82)",
-                                  border: checked
-                                    ? `1.5px solid ${selectedSurvey.accent}`
-                                    : "1px solid rgba(212, 229, 216, 0.85)",
-                                }}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div
-                                    className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border text-white"
-                                    style={{
-                                      borderColor: checked
-                                        ? selectedSurvey.accent
-                                        : "var(--mevi-border)",
-                                      background: checked
-                                        ? selectedSurvey.accent
-                                        : "white",
-                                    }}
-                                  >
-                                    {checked && (
-                                      <CheckCircle2 className="h-3.5 w-3.5" />
-                                    )}
-                                  </div>
-                                  <p
-                                    className="text-sm font-medium"
-                                    style={{
-                                      color: "var(--mevi-text-primary)",
-                                    }}
-                                  >
-                                    {option.label}
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {question.type === "rating" && (
-                        <div>
-                          <div className="grid grid-cols-5 gap-3 sm:grid-cols-10">
-                            {(question.options ?? []).map((option) => {
-                              const checked = optionIsSelected(
-                                answerValue,
+                  {currentQuestion.type === "yes_no" && (
+                    <div className="space-y-3">
+                      {currentQuestion.options?.map((option, index) => {
+                        const checked =
+                          typeof getAnswerValue(currentQuestion) === "boolean"
+                            ? option.id ===
+                              ((getAnswerValue(currentQuestion) as boolean)
+                                ? 1
+                                : 0)
+                            : optionIsSelected(
+                                getAnswerValue(currentQuestion),
                                 option,
                               );
 
-                              return (
-                                <button
-                                  key={option.id}
-                                  type="button"
-                                  onClick={() =>
-                                    updateAnswer(question.id, option.id)
-                                  }
-                                  className="rounded-2xl px-3 py-3 text-sm font-semibold transition-all"
+                        return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() =>
+                                  updateAnswer(currentQuestion.id, option.id === 1)
+                                }
+                                className="w-full rounded-[24px] p-4 text-left transition-all duration-300"
+                                style={{
+                                  background: checked
+                                ? currentSurvey.softAccent
+                                : "rgba(255,255,255,0.9)",
+                                  border: checked
+                                ? `1.5px solid ${currentSurvey.accent}`
+                                : "1px solid rgba(212, 229, 216, 0.85)",
+                                  boxShadow: checked
+                                ? "0 14px 30px -18px rgba(6,78,59,0.28)"
+                                : "0 10px 24px -20px rgba(6,78,59,0.12)",
+                                }}
+                          >
+                            <div className="flex items-center gap-4">
+                                <div
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  style={{
+                                    background: checked
+                                    ? currentSurvey.accent
+                                    : "rgba(236,253,245,0.75)",
+                                  color: checked
+                                    ? "white"
+                                    : currentSurvey.accent,
+                                  }}
+                                >
+                                {index + 1}
+                              </div>
+                              <div
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                                style={{
+                                  background: checked
+                                    ? "rgba(255,255,255,0.18)"
+                                    : "rgba(236,253,245,0.75)",
+                                  color: checked
+                                    ? "white"
+                                    : currentSurvey.accent,
+                                }}
+                              >
+                                <CheckCircle2 className="h-5 w-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className="text-[15px] font-semibold leading-6"
                                   style={{
                                     color: checked
                                       ? "white"
                                       : "var(--mevi-text-primary)",
-                                    background: checked
-                                      ? selectedSurvey.accent
-                                      : "rgba(255,255,255,0.84)",
-                                    border: checked
-                                      ? `1.5px solid ${selectedSurvey.accent}`
-                                      : "1px solid rgba(212, 229, 216, 0.85)",
                                   }}
                                 >
                                   {option.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <div
-                            className="mt-3 flex items-center justify-between text-xs"
-                            style={{ color: "var(--mevi-text-muted)" }}
-                          >
-                            <span>{question.ratingMinLabel || "Thấp"}</span>
-                            <span>{question.ratingMaxLabel || "Cao"}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {question.type === "yes_no" && (
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {question.options?.map((option) => {
-                            const checked =
-                              typeof answerValue === "boolean"
-                                ? option.id === (answerValue ? 1 : 0)
-                                : optionIsSelected(answerValue, option);
-
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                onClick={() =>
-                                  updateAnswer(
-                                    question.id,
-                                    option.id === 1 ? true : false,
-                                  )
-                                }
-                                className="rounded-2xl p-4 text-left transition-all"
-                                style={{
-                                  background: checked
-                                    ? selectedSurvey.softAccent
-                                    : "rgba(255,255,255,0.82)",
-                                  border: checked
-                                    ? `1.5px solid ${selectedSurvey.accent}`
-                                    : "1px solid rgba(212, 229, 216, 0.85)",
-                                }}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div
-                                    className="flex h-9 w-9 items-center justify-center rounded-full"
-                                    style={{
-                                      background: checked
-                                        ? selectedSurvey.accent
-                                        : "rgba(236, 253, 245, 0.7)",
-                                      color: checked
-                                        ? "white"
-                                        : selectedSurvey.accent,
-                                    }}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </div>
-                                  <span
-                                    className="text-sm font-medium"
-                                    style={{
-                                      color: "var(--mevi-text-primary)",
-                                    }}
-                                  >
-                                    {option.label}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </article>
-                );
-              })}
-            </div>
+                  )}
+                </div>
 
-            <div
-              className="flex flex-col gap-3 rounded-[26px] p-5 sm:flex-row sm:items-center sm:justify-between"
-              style={{
-                background: "rgba(255,255,255,0.78)",
-                border: "1px solid rgba(212, 229, 216, 0.8)",
-              }}
-            >
-              <div>
-                <p
-                  className="text-sm font-semibold"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  Hoàn tất khảo sát
-                </p>
-                <p
-                  className="mt-1 text-sm"
-                  style={{ color: "var(--mevi-text-secondary)" }}
-                >
-                  Nút gửi sẽ nộp phần câu hỏi thật từ API. Các câu demo chỉ dùng
-                  để xem trước giao diện nhiều loại câu hỏi.
-                </p>
+                {submitFeedback && (
+                  <div
+                    className="mt-5 rounded-[22px] border border-[rgba(254,202,202,0.9)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm"
+                    style={{ color: "#b91c1c" }}
+                  >
+                    {submitFeedback}
+                  </div>
+                )}
+              </article>
+
+              <div
+                className="flex flex-col gap-4 rounded-[28px] border bg-white/78 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                style={{ borderColor: "rgba(212, 229, 216, 0.8)" }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--mevi-text-primary)" }}
+                  >
+                    {isLastQuestion ? "Sắp hoàn tất" : "Chọn xong rồi bấm Next"}
+                  </p>
+                  <p
+                    className="mt-1 text-sm"
+                    style={{ color: "var(--mevi-text-secondary)" }}
+                  >
+                    {isLastQuestion
+                      ? "Nhấn Next để gửi toàn bộ câu trả lời và chuyển sang bước tiếp theo."
+                      : "Mỗi lần chỉ trả lời một câu, sau đó đi sang câu tiếp theo."}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="rounded-[12px] border px-5 py-3 text-sm font-semibold transition-colors hover:bg-white/80 whitespace-nowrap"
+                    style={{
+                      color: "var(--mevi-text-secondary)",
+                      borderColor: "var(--mevi-border)",
+                      background: "rgba(255,255,255,0.6)",
+                    }}
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={nextDisabled}
+                    className="mevi-btn-primary min-w-40 px-5 disabled:opacity-60"
+                  >
+                    <span className="flex w-full items-center justify-center gap-2 text-center">
+                      {submitMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Đang gửi...
+                        </>
+                      ) : isLastQuestion ? (
+                        "Hoàn tất"
+                      ) : (
+                        <>
+                          Tiếp tục
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </span>
+                  </button>
+                </div>
               </div>
-              <div className="flex sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={submitMutation.isPending}
-                  className="mevi-btn-primary min-w-40 px-5 disabled:opacity-60"
-                >
-                  <span className="flex w-full items-center justify-center gap-2 text-center">
-                    {submitMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang gửi...
-                      </>
-                    ) : (
-                      "Gửi khảo sát"
-                    )}
-                  </span>
-                </button>
-              </div>
-              {submitFeedback && (
-                <p className="text-sm" style={{ color: "#b91c1c" }}>
-                  {submitFeedback}
-                </p>
-              )}
-            </div>
-          </section>
+            </section>
+          )}
         </div>
-      </div>
+      </main>
+
+      <PortalFooter />
     </div>
   );
 }

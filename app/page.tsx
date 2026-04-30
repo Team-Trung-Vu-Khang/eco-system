@@ -131,8 +131,7 @@ export default function LoginPage() {
       setIsLoggingIn(false);
       window.sessionStorage.setItem("mevi_user_email", email);
       window.sessionStorage.setItem("mevi_user_name", "Tài khoản quản trị MEVI");
-      window.sessionStorage.setItem("mevi_show_welcome_survey", "true");
-      router.push("/dashboard");
+      router.push("/survey?surveyId=396&source=login&returnTo=%2Fdashboard");
     }, 1200);
   };
 

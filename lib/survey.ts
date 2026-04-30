@@ -11,6 +11,7 @@ export type SurveyQuestionType =
 export type SurveyOption = {
   id: number;
   label: string;
+  description?: string;
   isOther?: boolean | null;
 };
 
