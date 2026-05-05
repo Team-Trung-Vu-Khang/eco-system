@@ -8,6 +8,7 @@ import {
   SlidersHorizontal,
   Sprout,
   SquareCheckBig,
+  Table2,
 } from "lucide-react";
 import {
   type SurveyQuestion,
@@ -291,4 +292,7 @@ export const questionTypeMeta: Record<
   multiple_choice: { label: "Chọn nhiều", icon: SquareCheckBig },
   rating: { label: "Thang điểm", icon: SlidersHorizontal },
   yes_no: { label: "Có / Không", icon: CheckCircle2 },
+  single_choice_matrix: { label: "Ma trận 1 chọn", icon: Table2 },
+  multi_choice_matrix: { label: "Ma trận nhiều chọn", icon: Table2 },
+  linear_matrix: { label: "Ma trận tuyến tính", icon: Table2 },
 };

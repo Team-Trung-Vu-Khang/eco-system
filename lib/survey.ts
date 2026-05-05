@@ -1,18 +1,37 @@
 export const SURVEY_API_BASE = "https://api.xbest.io/lms-survey-service/v1";
-export const SURVEY_API_ORIGIN = "https://mevi.edtexco.vn";
+
+export const SURVEY_REQUEST_TYPES = [
+  "general",
+  "farm",
+  "factory",
+  "shop",
+] as const;
+
+export type SurveyRequestType = (typeof SURVEY_REQUEST_TYPES)[number];
+
+export const SURVEY_PERIOD_IDS: Record<SurveyRequestType, number> = {
+  general: 396,
+  farm: 397,
+  factory: 398,
+  shop: 399,
+};
 
 export type SurveyQuestionType =
   | "essay"
   | "single_choice"
   | "multiple_choice"
   | "rating"
-  | "yes_no";
+  | "yes_no"
+  | "single_choice_matrix"
+  | "multi_choice_matrix"
+  | "linear_matrix";
 
 export type SurveyOption = {
   id: number;
   label: string;
   description?: string;
   isOther?: boolean | null;
+  isRow?: boolean | null;
 };
 
 export type SurveyQuestion = {
@@ -32,6 +51,7 @@ export type SurveyAnswerValue = string | number[] | number | boolean | null;
 
 export type SurveyResultDetails = {
   id: number;
+  userId?: string;
   userCode: string;
   userName: string;
   positionName: string;
@@ -39,12 +59,16 @@ export type SurveyResultDetails = {
   email: string;
   surveyPeriodId: number;
   surveyPeriodName: string;
+  status?: "not_started" | "submitted" | string;
+  submittedAt?: string | null;
   resultQuestions: SurveyQuestion[];
 };
 
 type RawApiAnswer = {
   id?: number;
   content?: string;
+  sortIndex?: number | null;
+  isRow?: boolean | null;
   isOther?: boolean | null;
 };
 
@@ -61,6 +85,7 @@ type RawApiQuestion = {
 
 type RawApiSurveyData = {
   id?: number;
+  userId?: string;
   userCode?: string;
   userName?: string;
   positionName?: string;
@@ -68,6 +93,8 @@ type RawApiSurveyData = {
   email?: string;
   surveyPeriodId?: number;
   surveyPeriodName?: string;
+  status?: string;
+  submittedAt?: string | null;
   resultQuestions?: RawApiQuestion[];
 };
 
@@ -82,6 +109,7 @@ export type SubmitSurveyPayload = {
   dataSubmit: Array<{
     questionId: number;
     answers: Array<{
+      answerRowId?: number;
       answerIds: number[];
       content: string;
     }>;
@@ -109,10 +137,12 @@ export function mapApiQuestionType(type?: string): SurveyQuestionType {
   switch (type) {
     case "essay":
       return "essay";
+    case "select":
     case "single_choice":
     case "radio":
     case "choice":
       return "single_choice";
+    case "multi_select":
     case "multiple_choice":
     case "checkbox":
       return "multiple_choice";
@@ -123,6 +153,12 @@ export function mapApiQuestionType(type?: string): SurveyQuestionType {
     case "yes_no":
     case "boolean":
       return "yes_no";
+    case "single_choice_matrix":
+      return "single_choice_matrix";
+    case "multi_choice_matrix":
+      return "multi_choice_matrix";
+    case "linear_matrix":
+      return "linear_matrix";
     default:
       return "essay";
   }
@@ -141,10 +177,12 @@ export function mapApiSurveyResponse(
       const mappedType = mapApiQuestionType(question.type);
       const options = (question.answers ?? [])
         .filter((answer) => typeof answer.id === "number")
+        .sort((left, right) => (left.sortIndex ?? 0) - (right.sortIndex ?? 0))
         .map((answer) => ({
           id: answer.id as number,
           label: answer.content?.trim() || `Lựa chọn ${answer.id}`,
           isOther: answer.isOther ?? false,
+          isRow: answer.isRow ?? false,
         }));
 
       return {
@@ -154,7 +192,11 @@ export function mapApiSurveyResponse(
         helperText: question.note ?? null,
         type: mappedType,
         options:
-          mappedType === "essay" ? undefined : options.length ? options : undefined,
+          mappedType === "essay"
+            ? undefined
+            : options.length
+              ? options
+              : undefined,
         ratingMinLabel: question.linearRangeFromLabel ?? null,
         ratingMaxLabel: question.linearRangeToLabel ?? null,
         source: "api",
@@ -164,6 +206,7 @@ export function mapApiSurveyResponse(
 
   return {
     id: data.id ?? 0,
+    userId: data.userId,
     userCode: data.userCode ?? "",
     userName: data.userName ?? "",
     positionName: data.positionName ?? "",
@@ -171,6 +214,8 @@ export function mapApiSurveyResponse(
     email: data.email ?? "",
     surveyPeriodId: data.surveyPeriodId ?? 0,
     surveyPeriodName: data.surveyPeriodName ?? "",
+    status: data.status,
+    submittedAt: data.submittedAt ?? null,
     resultQuestions: mappedQuestions,
   };
 }
@@ -186,6 +231,10 @@ export function getDefaultAnswer(question: SurveyQuestion): SurveyAnswerValue {
       return [];
     case "yes_no":
       return null;
+    case "single_choice_matrix":
+    case "multi_choice_matrix":
+    case "linear_matrix":
+      return [];
     default:
       return "";
   }
@@ -197,4 +246,56 @@ export function isAnswered(value: SurveyAnswerValue) {
   if (typeof value === "number") return true;
   if (typeof value === "boolean") return true;
   return false;
+}
+
+export async function fetchSurveyDetail(
+  type: SurveyRequestType,
+  value: string,
+): Promise<SurveyResultDetails | null> {
+  const apiUrl = new URL(
+    `${SURVEY_API_BASE}/survey-periods/${SURVEY_PERIOD_IDS[type]}/results`,
+  );
+  apiUrl.searchParams.set("email", value);
+
+  const response = await fetch(apiUrl.toString(), {
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  const payload = normalizeObjectKeys(
+    (await response.json()) as RawApiSurveyResponse,
+  );
+
+  if (!response.ok) {
+    throw new Error(payload.message || "Không tải được khảo sát.");
+  }
+
+  return mapApiSurveyResponse(payload);
+}
+
+export async function submitSurveyResult(
+  surveyPeriodId: number,
+  payload: SubmitSurveyPayload,
+) {
+  const response = await fetch(
+    `${SURVEY_API_BASE}/survey-periods/${surveyPeriodId}/results/submit`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+  const responsePayload = normalizeObjectKeys(await response.json());
+
+  if (!response.ok) {
+    throw new Error(
+      responsePayload.message || "Không hoàn tất được khảo sát.",
+    );
+  }
+
+  return responsePayload;
 }

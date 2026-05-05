@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,11 +23,14 @@ import {
 } from "./data";
 import { optionIsSelected } from "./utils";
 import {
+  type SubmitSurveyPayload,
   type SurveyAnswerValue,
   type SurveyQuestion,
   type SurveyResultDetails,
+  fetchSurveyDetail,
   getDefaultAnswer,
   isAnswered,
+  submitSurveyResult,
 } from "@/lib/survey";
 
 type SurveyQuestionWithMeta = SurveyQuestion & {
@@ -35,6 +38,79 @@ type SurveyQuestionWithMeta = SurveyQuestion & {
   surveyPeriodName?: string;
   originalQuestionId?: number;
 };
+
+function buildSubmitPayload(
+  questions: SurveyQuestion[],
+  answersByQuestion: Record<number, SurveyAnswerValue>,
+): SubmitSurveyPayload["dataSubmit"] {
+  return questions
+    .map((question) => {
+      const value = answersByQuestion[question.id] ?? getDefaultAnswer(question);
+
+      if (!isAnswered(value)) return null;
+
+      if (question.type === "essay" && typeof value === "string") {
+        const answerIds = (question.options ?? []).map((option) => option.id);
+        return {
+          questionId: question.id,
+          answers: [
+            {
+              answerIds,
+              content: value.trim(),
+            },
+          ],
+        };
+      }
+
+      if (question.type === "multiple_choice" && Array.isArray(value)) {
+        return {
+          questionId: question.id,
+          answers: [
+            {
+              answerIds: value,
+              content: "",
+            },
+          ],
+        };
+      }
+
+      if (
+        (question.type === "single_choice" || question.type === "rating") &&
+        typeof value === "number"
+      ) {
+        const option = question.options?.find((item) => item.id === value);
+        return {
+          questionId: question.id,
+          answers: [
+            {
+              answerIds: [value],
+              content: option?.isOther ? option.label : "",
+            },
+          ],
+        };
+      }
+
+      if (question.type === "yes_no" && typeof value === "boolean") {
+        const answerId = value ? 1 : 0;
+        const option = question.options?.find((item) => item.id === answerId);
+        return {
+          questionId: question.id,
+          answers: [
+            {
+              answerIds: [answerId],
+              content: option?.isOther ? option.label : "",
+            },
+          ],
+        };
+      }
+
+      return null;
+    })
+    .filter(
+      (item): item is SubmitSurveyPayload["dataSubmit"][number] =>
+        Boolean(item),
+    );
+}
 
 function SurveyPageContent() {
   const router = useRouter();
@@ -52,9 +128,15 @@ function SurveyPageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [completionTarget, setCompletionTarget] = useState<string | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
+  const [userEmail] = useState(() => {
+    if (typeof window === "undefined") return "mevi@gmail.com";
+    return window.sessionStorage.getItem("mevi_user_email") ?? "mevi@gmail.com";
+  });
+
+  const selectedIntroValue = answersByQuestion[INTRO_USER_QUESTION_ID];
 
   const selectedSurveyIds = useMemo(() => {
-    const selectedValue = answersByQuestion[INTRO_USER_QUESTION_ID];
+    const selectedValue = selectedIntroValue;
 
     if (Array.isArray(selectedValue) && selectedValue.length > 0) {
       return [
@@ -64,10 +146,53 @@ function SurveyPageContent() {
     }
 
     return [GENERAL_SURVEY_ID];
-  }, [answersByQuestion]);
+  }, [selectedIntroValue]);
+
+  const selectedSurveyKeys = useMemo(
+    () =>
+      selectedSurveyIds
+        .map((surveyPeriodId) =>
+          surveyTypes.find((survey) => survey.id === surveyPeriodId),
+        )
+        .filter((survey): survey is (typeof surveyTypes)[number] =>
+          Boolean(survey),
+        ),
+    [selectedSurveyIds],
+  );
+
+  const surveyQueries = useQueries({
+    queries: selectedSurveyKeys.map((survey) => ({
+      queryKey: ["survey-detail", survey.key, userEmail],
+      queryFn: () => fetchSurveyDetail(survey.key, userEmail),
+      enabled: Boolean(userEmail),
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
+  const apiSurveyDetails = useMemo(
+    () =>
+      Object.fromEntries(
+        surveyQueries
+          .map((query, index) => [selectedSurveyKeys[index]?.id, query.data])
+          .filter(
+            (entry): entry is [number, SurveyResultDetails] =>
+              typeof entry[0] === "number" && Boolean(entry[1]),
+          ),
+      ),
+    [selectedSurveyKeys, surveyQueries],
+  );
+
+  const isLoadingSurveys = surveyQueries.some((query) => query.isLoading);
+  const surveyLoadError = surveyQueries.find((query) => query.isError)?.error;
+  const surveyLoadFeedback =
+    surveyLoadError instanceof Error ? surveyLoadError.message : null;
+  const visibleFeedback = submitFeedback ?? surveyLoadFeedback;
 
   const surveyDetails = selectedSurveyIds
-    .map((surveyPeriodId) => demoSurveyDetails[surveyPeriodId])
+    .map(
+      (surveyPeriodId) =>
+        apiSurveyDetails[surveyPeriodId] ?? demoSurveyDetails[surveyPeriodId],
+    )
     .filter((detail): detail is SurveyResultDetails => Boolean(detail));
 
   const apiQuestions: SurveyQuestionWithMeta[] = surveyDetails.flatMap(
@@ -154,7 +279,25 @@ function SurveyPageContent() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      const submitTargets = surveyDetails.filter(
+        (surveyDetail) =>
+          apiSurveyDetails[surveyDetail.surveyPeriodId] &&
+          surveyDetail.resultQuestions.some((question) =>
+            isAnswered(getAnswerValue(question)),
+          ),
+      );
+
+      await Promise.all(
+        submitTargets.map((surveyDetail) =>
+          submitSurveyResult(surveyDetail.surveyPeriodId, {
+            email: userEmail,
+            dataSubmit: buildSubmitPayload(
+              surveyDetail.resultQuestions,
+              answersByQuestion,
+            ),
+          }),
+        ),
+      );
 
       return {
         answeredCount,
@@ -330,7 +473,9 @@ function SurveyPageContent() {
                       className="text-xs"
                       style={{ color: "var(--mevi-text-muted)" }}
                     >
-                      {answeredCount} câu đã trả lời
+                      {isLoadingSurveys
+                        ? "Đang đồng bộ API khảo sát..."
+                        : `${answeredCount} câu đã trả lời`}
                     </p>
                   </div>
                 </div>
@@ -793,12 +938,12 @@ function SurveyPageContent() {
                   )}
                 </div>
 
-                {submitFeedback && (
+                {visibleFeedback && (
                   <div
                     className="mt-5 rounded-[22px] border border-[rgba(254,202,202,0.9)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm"
                     style={{ color: "#b91c1c" }}
                   >
-                    {submitFeedback}
+                    {visibleFeedback}
                   </div>
                 )}
               </article>
