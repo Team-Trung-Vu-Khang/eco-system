@@ -15,9 +15,7 @@ import { SurveyPortalHeader } from "./components/survey-portal-header";
 import { SurveySuccessModal } from "./components/survey-success-modal";
 import {
   GENERAL_SURVEY_ID,
-  INTRO_USER_QUESTION_ID,
   demoSurveyDetails,
-  introQuestions,
   questionTypeMeta,
   surveyTypes,
 } from "./data";
@@ -25,10 +23,13 @@ import { optionIsSelected } from "./utils";
 import {
   type SubmitSurveyPayload,
   type SurveyAnswerValue,
+  type SurveyLookupType,
   type SurveyQuestion,
   type SurveyResultDetails,
+  type SurveyRequestType,
   fetchSurveyDetail,
   getDefaultAnswer,
+  inferSurveyLookupType,
   isAnswered,
   submitSurveyResult,
 } from "@/lib/survey";
@@ -38,6 +39,49 @@ type SurveyQuestionWithMeta = SurveyQuestion & {
   surveyPeriodName?: string;
   originalQuestionId?: number;
 };
+
+const DEFAULT_SURVEY_LOOKUP_VALUE = "0315624919";
+const BRANCH_QUESTION_CODE = "KS06";
+const BRANCH_QUESTION_CONTENT =
+  "Bạn mong muốn giải quyết vấn đề nào nhất khi tham gia App MEVI?";
+
+function isBranchQuestion(question?: SurveyQuestion | null) {
+  if (!question) return false;
+
+  return (
+    question.code === BRANCH_QUESTION_CODE ||
+    question.content
+      .toLocaleLowerCase("vi")
+      .includes(BRANCH_QUESTION_CONTENT.toLocaleLowerCase("vi"))
+  );
+}
+
+function getBranchSurveyType(
+  question: SurveyQuestion | undefined,
+  value: SurveyAnswerValue,
+): SurveyRequestType | null {
+  if (!question || !isBranchQuestion(question) || typeof value !== "number") {
+    return null;
+  }
+
+  const selectedOption = question.options?.find((option) => option.id === value);
+  const selectedLabel = selectedOption?.label.toLocaleUpperCase("vi") ?? "";
+
+  if (selectedLabel.includes("MEVI FARM")) return "farm";
+  if (selectedLabel.includes("MEVI FACTORY")) return "factory";
+  if (selectedLabel.includes("MEVI SHOP")) return "shop";
+
+  return null;
+}
+
+function getStoredLookupType(value: string): SurveyLookupType {
+  if (typeof window === "undefined") return inferSurveyLookupType(value);
+
+  const storedType = window.sessionStorage.getItem("mevi_user_lookup_type");
+  if (storedType === "phone" || storedType === "email") return storedType;
+
+  return inferSurveyLookupType(value);
+}
 
 function buildSubmitPayload(
   questions: SurveyQuestion[],
@@ -128,43 +172,65 @@ function SurveyPageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [completionTarget, setCompletionTarget] = useState<string | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
-  const [userEmail] = useState(() => {
-    if (typeof window === "undefined") return "mevi@gmail.com";
-    return window.sessionStorage.getItem("mevi_user_email") ?? "mevi@gmail.com";
-  });
+  const [selectedBranchSurveyType, setSelectedBranchSurveyType] =
+    useState<SurveyRequestType | null>(() => {
+      if (initialSurveyId === 397) return "farm";
+      if (initialSurveyId === 398) return "factory";
+      if (initialSurveyId === 399) return "shop";
 
-  const selectedIntroValue = answersByQuestion[INTRO_USER_QUESTION_ID];
+      return null;
+    });
+  const [surveyLookup] = useState(() => {
+    const phoneParam = searchParams.get("phone")?.trim();
+    const emailParam = searchParams.get("email")?.trim();
 
-  const selectedSurveyIds = useMemo(() => {
-    const selectedValue = selectedIntroValue;
-
-    if (Array.isArray(selectedValue) && selectedValue.length > 0) {
-      return [
-        GENERAL_SURVEY_ID,
-        ...selectedValue.filter((id) => id !== GENERAL_SURVEY_ID),
-      ];
+    if (phoneParam) {
+      return { type: "phone" as const, value: phoneParam };
     }
 
-    return [GENERAL_SURVEY_ID];
-  }, [selectedIntroValue]);
+    if (emailParam) {
+      return { type: "email" as const, value: emailParam };
+    }
+
+    if (typeof window === "undefined") {
+      return {
+        type: "phone" as const,
+        value: DEFAULT_SURVEY_LOOKUP_VALUE,
+      };
+    }
+
+    const storedValue =
+      window.sessionStorage.getItem("mevi_user_identifier") ??
+      window.sessionStorage.getItem("mevi_user_email") ??
+      DEFAULT_SURVEY_LOOKUP_VALUE;
+
+    return {
+      type: getStoredLookupType(storedValue),
+      value: storedValue,
+    };
+  });
 
   const selectedSurveyKeys = useMemo(
-    () =>
-      selectedSurveyIds
-        .map((surveyPeriodId) =>
-          surveyTypes.find((survey) => survey.id === surveyPeriodId),
-        )
-        .filter((survey): survey is (typeof surveyTypes)[number] =>
-          Boolean(survey),
-        ),
-    [selectedSurveyIds],
+    () => [
+      surveyTypes[0],
+      ...(selectedBranchSurveyType
+        ? surveyTypes.filter((survey) => survey.key === selectedBranchSurveyType)
+        : []),
+    ],
+    [selectedBranchSurveyType],
   );
 
   const surveyQueries = useQueries({
     queries: selectedSurveyKeys.map((survey) => ({
-      queryKey: ["survey-detail", survey.key, userEmail],
-      queryFn: () => fetchSurveyDetail(survey.key, userEmail),
-      enabled: Boolean(userEmail),
+      queryKey: [
+        "survey-detail",
+        survey.key,
+        surveyLookup.type,
+        surveyLookup.value,
+      ],
+      queryFn: () =>
+        fetchSurveyDetail(survey.key, surveyLookup.value, surveyLookup.type),
+      enabled: Boolean(surveyLookup.value),
       staleTime: 5 * 60 * 1000,
     })),
   });
@@ -188,11 +254,8 @@ function SurveyPageContent() {
     surveyLoadError instanceof Error ? surveyLoadError.message : null;
   const visibleFeedback = submitFeedback ?? surveyLoadFeedback;
 
-  const surveyDetails = selectedSurveyIds
-    .map(
-      (surveyPeriodId) =>
-        apiSurveyDetails[surveyPeriodId] ?? demoSurveyDetails[surveyPeriodId],
-    )
+  const surveyDetails = selectedSurveyKeys
+    .map((survey) => apiSurveyDetails[survey.id] ?? demoSurveyDetails[survey.id])
     .filter((detail): detail is SurveyResultDetails => Boolean(detail));
 
   const apiQuestions: SurveyQuestionWithMeta[] = surveyDetails.flatMap(
@@ -206,7 +269,6 @@ function SurveyPageContent() {
   );
 
   const wizardQuestions: SurveyQuestionWithMeta[] = [
-    ...introQuestions,
     ...apiQuestions,
   ];
   const effectiveIndex = Math.min(
@@ -241,10 +303,6 @@ function SurveyPageContent() {
 
   const currentAnswers = answersByQuestion;
   const getAnswerValue = (question: SurveyQuestion) => {
-    if (question.id === INTRO_USER_QUESTION_ID) {
-      return currentAnswers[question.id] ?? [initialSurveyId];
-    }
-
     return currentAnswers[question.id] ?? getDefaultAnswer(question);
   };
 
@@ -259,6 +317,12 @@ function SurveyPageContent() {
     : 0;
 
   const updateAnswer = (questionId: number, value: SurveyAnswerValue) => {
+    const question = wizardQuestions.find((item) => item.id === questionId);
+
+    if (isBranchQuestion(question)) {
+      setSelectedBranchSurveyType(getBranchSurveyType(question, value));
+    }
+
     setAnswersByQuestion((current) => ({
       ...current,
       [questionId]: value,
@@ -290,7 +354,9 @@ function SurveyPageContent() {
       await Promise.all(
         submitTargets.map((surveyDetail) =>
           submitSurveyResult(surveyDetail.surveyPeriodId, {
-            email: userEmail,
+            email:
+              surveyDetail.email ||
+              (surveyLookup.type === "email" ? surveyLookup.value : ""),
             dataSubmit: buildSubmitPayload(
               surveyDetail.resultQuestions,
               answersByQuestion,
@@ -330,6 +396,11 @@ function SurveyPageContent() {
   const goNext = () => {
     if (!currentQuestion || submitMutation.isPending) return;
 
+    if (isLoadingSurveys) {
+      setSubmitFeedback("Đang tải phần khảo sát tiếp theo. Vui lòng chờ.");
+      return;
+    }
+
     const answerValue = getAnswerValue(currentQuestion);
     if (!isAnswered(answerValue)) {
       setSubmitFeedback("Vui lòng trả lời câu hỏi này rồi nhấn Next.");
@@ -366,7 +437,7 @@ function SurveyPageContent() {
     wizardQuestions.length,
   );
   const isLastQuestion = effectiveIndex === wizardQuestions.length - 1;
-  const nextDisabled = submitMutation.isPending;
+  const nextDisabled = submitMutation.isPending || isLoadingSurveys;
 
   return (
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">

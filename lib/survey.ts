@@ -1,4 +1,6 @@
 export const SURVEY_API_BASE = "https://api.xbest.io/lms-survey-service/v1";
+export const SURVEY_MEVI_AUTHORIZATION =
+  "Basic bWV2aS1lZHU6YUNjQWNWd1Q2NTY0UHZ2SDhtZGNsWQ==";
 
 export const SURVEY_REQUEST_TYPES = [
   "general",
@@ -8,6 +10,7 @@ export const SURVEY_REQUEST_TYPES = [
 ] as const;
 
 export type SurveyRequestType = (typeof SURVEY_REQUEST_TYPES)[number];
+export type SurveyLookupType = "phone" | "email";
 
 export const SURVEY_PERIOD_IDS: Record<SurveyRequestType, number> = {
   general: 396,
@@ -248,18 +251,24 @@ export function isAnswered(value: SurveyAnswerValue) {
   return false;
 }
 
+export function inferSurveyLookupType(value: string): SurveyLookupType {
+  return value.includes("@") ? "email" : "phone";
+}
+
 export async function fetchSurveyDetail(
   type: SurveyRequestType,
   value: string,
+  lookupType: SurveyLookupType = inferSurveyLookupType(value),
 ): Promise<SurveyResultDetails | null> {
-  const apiUrl = new URL(
-    `${SURVEY_API_BASE}/survey-periods/${SURVEY_PERIOD_IDS[type]}/results`,
-  );
-  apiUrl.searchParams.set("email", value);
+  const apiUrl = new URL(`${SURVEY_API_BASE}/survey-result-mevi/${type}`);
+  apiUrl.searchParams.set("type", lookupType);
+  apiUrl.searchParams.set(lookupType, value);
 
   const response = await fetch(apiUrl.toString(), {
     headers: {
-      Accept: "application/json",
+      accept: "*/*",
+      "accept-language": "vi,en;q=0.9",
+      authorization: SURVEY_MEVI_AUTHORIZATION,
     },
     cache: "no-store",
   });
@@ -283,8 +292,9 @@ export async function submitSurveyResult(
     {
       method: "POST",
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
+        accept: "application/json",
+        authorization: SURVEY_MEVI_AUTHORIZATION,
+        "content-type": "application/json",
       },
       body: JSON.stringify(payload),
     },

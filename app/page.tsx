@@ -122,7 +122,7 @@ function EcosystemFlowMini() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("mevi@gmail.com");
+  const [email, setEmail] = useState("0315624919");
   const [password, setPassword] = useState("Admin1234!");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -130,8 +130,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoggingIn(true);
     setTimeout(() => {
+      const loginIdentifier = email.trim();
+      const lookupType = loginIdentifier.includes("@") ? "email" : "phone";
+
       setIsLoggingIn(false);
-      window.sessionStorage.setItem("mevi_user_email", email);
+      window.sessionStorage.setItem("mevi_user_identifier", loginIdentifier);
+      window.sessionStorage.setItem("mevi_user_lookup_type", lookupType);
+      window.sessionStorage.setItem("mevi_user_email", loginIdentifier);
       window.sessionStorage.setItem(
         "mevi_user_name",
         "Tài khoản quản trị MEVI",
