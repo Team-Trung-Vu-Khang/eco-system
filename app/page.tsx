@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Sprout,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -96,16 +97,20 @@ function DecorativeLeaves() {
 
 /* ===== Ecosystem Flow Mini ===== */
 
-function EcosystemFlowMini() {
+type EcosystemFlowMiniProps = {
+  className?: string;
+};
+
+function EcosystemFlowMini({ className = "" }: EcosystemFlowMiniProps) {
   return (
     <div
-      className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 py-2 opacity-0 animate-fade-in-up delay-500"
+      className={`flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 py-2 opacity-0 animate-fade-in-up delay-500 ${className}`.trim()}
       style={{ animationFillMode: "forwards" }}
     >
       {modules.map((mod, i) => (
         <div key={mod.id} className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${mod.dotColor}`}></div>
+          <div className="flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 shadow-sm ring-1 ring-[rgba(212,229,216,0.55)]">
+            <span className={`h-2 w-2 rounded-full ${mod.dotColor}`} />
             <span
               className="text-xs font-medium"
               style={{ color: "var(--mevi-text-muted)" }}
@@ -125,6 +130,81 @@ function EcosystemFlowMini() {
         </div>
       ))}
     </div>
+  );
+}
+
+type LoginPanelProps = {
+  isLoggingIn: boolean;
+  onSubmit: (event: React.FormEvent) => void;
+};
+
+function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
+  return (
+    <section
+      className="mevi-login-card w-full p-4 opacity-0 animate-fade-in-scale delay-300 sm:p-5 md:p-6"
+      style={{ animationFillMode: "forwards" }}
+      aria-labelledby="login-card-title"
+    >
+      <div className="mb-5 text-center">
+        <div className="mb-3 inline-flex items-center justify-center animate-float">
+          <Image
+            src="/mevi-logo.jpeg"
+            alt="MEVI Logo"
+            className="h-10 w-10 rounded-xl object-contain shadow-sm"
+            width={40}
+            height={40}
+            style={{ border: "1px solid var(--mevi-border)" }}
+          />
+        </div>
+
+        <h2
+          id="login-card-title"
+          className="text-lg font-bold tracking-normal"
+          style={{ color: "var(--mevi-text-primary)" }}
+        >
+          Chào mừng trở lại
+        </h2>
+        <p className="mt-1 text-sm" style={{ color: "var(--mevi-text-muted)" }}>
+          Đăng nhập vào hệ thống MEVI
+        </p>
+      </div>
+
+      <form onSubmit={onSubmit} className="space-y-3.5">
+        <button
+          type="submit"
+          className="mevi-btn-primary"
+          disabled={isLoggingIn}
+        >
+          <span className="flex items-center justify-center gap-2">
+            {isLoggingIn ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Đang truy cập...
+              </>
+            ) : (
+              <>
+                Truy cập
+                <ArrowRight className="h-[18px] w-[18px]" />
+              </>
+            )}
+          </span>
+        </button>
+
+        <p
+          className="text-center text-sm leading-6"
+          style={{ color: "var(--mevi-text-secondary)" }}
+        >
+          Bạn đã có tài khoản chưa?{" "}
+          <Link
+            href="/register"
+            className="font-semibold underline-offset-2 hover:underline"
+            style={{ color: "var(--mevi-green-700)" }}
+          >
+            Đăng ký
+          </Link>
+        </p>
+      </form>
+    </section>
   );
 }
 
@@ -162,185 +242,57 @@ export default function LoginPage() {
           rightSlotClassName="mevi-badge hidden sm:flex"
         />
 
-        <main className="flex w-full flex-1 items-center justify-center px-4 pb-4 pt-1 sm:px-6 md:justify-start md:px-8 md:pt-2">
-          <div className="w-full md:hidden">
-            <div className="mx-auto w-full max-w-[22rem]">
+        <main className="relative z-10 flex w-full flex-1 items-center px-4 pb-6 pt-2 sm:px-6 sm:pt-4 md:px-10 md:pb-8 lg:px-14">
+          <section className="mx-auto grid w-full max-w-6xl items-center gap-5 sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] md:gap-10 lg:gap-14">
+            <div className="mx-auto w-full max-w-2xl text-center md:mx-0 md:text-left">
               <div
-                className="mevi-login-card w-full p-4 opacity-0 animate-fade-in-scale delay-300"
+                className="opacity-0 animate-fade-in-up delay-100"
                 style={{ animationFillMode: "forwards" }}
               >
-                <div className="mb-4 text-center sm:mb-5">
-                  <div className="mb-3 inline-flex items-center justify-center animate-float">
-                    <img
-                      src="/mevi-logo.jpeg"
-                      alt="MEVI Logo"
-                      className="h-9 w-9 rounded-xl object-contain shadow-sm"
-                      style={{ border: "1px solid var(--mevi-border)" }}
-                    />
-                  </div>
-
-                  <h2
-                    className="text-lg font-bold tracking-tight sm:text-[1.35rem]"
-                    style={{ color: "var(--mevi-text-primary)" }}
-                  >
-                    Chào mừng trở lại
-                  </h2>
-                  <p
-                    className="mt-1 text-xs sm:text-sm"
-                    style={{ color: "var(--mevi-text-muted)" }}
-                  >
-                    Đăng nhập để tiếp tục
-                  </p>
+                <div className="mevi-ecosystem-badge mx-auto mb-3 text-xs md:mx-0">
+                  <Link2 className="h-3.5 w-3.5" />
+                  <span>Mevi Ecosystem</span>
                 </div>
-
-                <form onSubmit={handleLogin} className="space-y-3">
-                  <div className="pt-0.5">
-                    <button
-                      type="submit"
-                      className="mevi-btn-primary"
-                      disabled={isLoggingIn}
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        {isLoggingIn ? (
-                          <>
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            Đang truy cập...
-                          </>
-                        ) : (
-                          <>
-                            Truy cập
-                            <ArrowRight className="h-[18px] w-[18px]" />
-                          </>
-                        )}
-                      </span>
-                    </button>
-                  </div>
-
-                  <p
-                    className="text-center text-sm"
-                    style={{ color: "var(--mevi-text-secondary)" }}
-                  >
-                    Bạn đã có tài khoản chưa?{" "}
-                    <Link
-                      href="/register"
-                      className="font-semibold underline-offset-2 hover:underline"
-                      style={{ color: "var(--mevi-green-700)" }}
-                    >
-                      Đăng ký
-                    </Link>
-                  </p>
-
-                  <div className="pt-1">
-                    <EcosystemFlowMini />
-                  </div>
-                </form>
               </div>
-            </div>
-          </div>
 
-          <div className="hidden w-full md:block">
-            <div className="mevi-desktop-shell mx-auto flex w-full max-w-xl flex-col items-center">
-              <div className="mb-4 max-w-2xl text-center lg:mb-6">
-                <div
-                  className="opacity-0 animate-fade-in-up delay-100"
-                  style={{ animationFillMode: "forwards" }}
-                >
-                  <div className="mevi-ecosystem-badge mx-auto mb-3 text-xs py-1">
-                    <Link2 className="w-3.5 h-3.5" />
-                    <span>Mevi Ecosystem</span>
-                  </div>
-                </div>
-
-                <h2
-                  className="text-balance text-[clamp(1.9rem,3.4vw,2.9rem)] font-extrabold leading-[1.08] tracking-tight opacity-0 animate-fade-in-up delay-200"
+              <h1
+                className="text-balance text-3xl font-extrabold leading-tight tracking-normal opacity-0 animate-fade-in-up delay-200 sm:text-4xl lg:text-5xl"
+                style={{
+                  color: "var(--mevi-text-primary)",
+                  animationFillMode: "forwards",
+                }}
+              >
+                Nền tảng quản lý{" "}
+                <span
+                  className="bg-clip-text text-transparent"
                   style={{
-                    color: "var(--mevi-text-primary)",
-                    animationFillMode: "forwards",
+                    backgroundImage:
+                      "linear-gradient(135deg, var(--mevi-green-600), var(--mevi-green-800))",
                   }}
                 >
-                  Nền tảng quản lý
-                  <br />
-                  <span
-                    className="bg-clip-text text-transparent"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(135deg, var(--mevi-green-600), var(--mevi-green-800))",
-                    }}
-                  >
-                    Nông nghiệp thông minh
-                  </span>
-                </h2>
+                  Nông nghiệp thông minh
+                </span>
+              </h1>
 
-                <EcosystemFlowMini />
-              </div>
-
-              <div
-                className="mevi-login-card mevi-desktop-card w-full max-w-[22rem] p-5 opacity-0 animate-fade-in-scale delay-300 md:p-6"
-                style={{ animationFillMode: "forwards" }}
+              <p
+                className="mx-auto mt-3 max-w-xl text-sm leading-6 opacity-0 animate-fade-in-up delay-300 sm:text-base md:mx-0"
+                style={{
+                  color: "var(--mevi-text-secondary)",
+                  animationFillMode: "forwards",
+                }}
               >
-                <div className="mb-5 text-center sm:mb-6">
-                  <div className="mb-3 inline-flex items-center justify-center animate-float">
-                    <img
-                      src="/mevi-logo.jpeg"
-                      alt="MEVI Logo"
-                      className="h-9 w-9 rounded-xl object-contain shadow-sm"
-                      style={{ border: "1px solid var(--mevi-border)" }}
-                    />
-                  </div>
-                  <h3
-                    className="text-base font-bold"
-                    style={{ color: "var(--mevi-text-primary)" }}
-                  >
-                    Chào mừng trở lại!
-                  </h3>
-                  <p
-                    className="mt-0.5 text-xs"
-                    style={{ color: "var(--mevi-text-muted)" }}
-                  >
-                    Đăng nhập vào hệ thống MEVI
-                  </p>
-                </div>
+                Một cổng đăng nhập cho toàn bộ hệ sinh thái MEVI, giúp kết nối
+                giáo dục, nông trại, nhà máy và cửa hàng trong cùng một luồng
+                làm việc.
+              </p>
 
-                <form onSubmit={handleLogin} className="space-y-3.5">
-                  <div className="pt-1">
-                    <button
-                      type="submit"
-                      className="mevi-btn-primary"
-                      disabled={isLoggingIn}
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        {isLoggingIn ? (
-                          <>
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            Đang truy cập...
-                          </>
-                        ) : (
-                          <>
-                            Truy cập
-                            <ArrowRight className="h-[18px] w-[18px]" />
-                          </>
-                        )}
-                      </span>
-                    </button>
-                  </div>
-
-                  <p
-                    className="text-center text-sm"
-                    style={{ color: "var(--mevi-text-secondary)" }}
-                  >
-                    Bạn đã có tài khoản chưa?{" "}
-                    <Link
-                      href="/register"
-                      className="font-semibold underline-offset-2 hover:underline"
-                      style={{ color: "var(--mevi-green-700)" }}
-                    >
-                      Đăng ký
-                    </Link>
-                  </p>
-                </form>
-              </div>
+              <EcosystemFlowMini className="mt-3 md:justify-start" />
             </div>
-          </div>
+
+            <div className="mx-auto w-full max-w-[24rem] md:mx-0 md:justify-self-end">
+              <LoginPanel isLoggingIn={isLoggingIn} onSubmit={handleLogin} />
+            </div>
+          </section>
         </main>
       </div>
 
