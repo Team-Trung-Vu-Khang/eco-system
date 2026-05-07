@@ -10,7 +10,6 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
@@ -28,6 +27,59 @@ import type {
 import { getStoredLookupType } from "@/features/survey/utils/survey-flow";
 
 /* ===== Module Data ===== */
+
+const SSO_API_BASE =
+  process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ?? "http://api-be-mevi.otechz.com";
+const TOKEN_STORAGE_KEY = "mevi_access_token";
+const AUTH_SESSION_KEYS = [
+  TOKEN_STORAGE_KEY,
+  "mevi_user_profile",
+  "mevi_sso_provider",
+  "mevi_user_identifier",
+  "mevi_user_lookup_type",
+  "mevi_user_email",
+  "mevi_user_name",
+  "mevi_session_id",
+  "mevi_company_id",
+  "mevi_user_id",
+] as const;
+
+function buildLogoutUrl() {
+  return new URL("/auth/logout", SSO_API_BASE).toString();
+}
+
+function clearStoredAuthSession() {
+  AUTH_SESSION_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
+}
+
+function getLogoutErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const record = payload as Record<string, unknown>;
+  const message = record.message ?? record.error;
+
+  return typeof message === "string" && message.trim()
+    ? message.trim()
+    : null;
+}
+
+async function requestLogout(token: string) {
+  const response = await fetch(buildLogoutUrl(), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    const message = getLogoutErrorMessage(payload);
+
+    throw new Error(message || "Không thể đăng xuất. Vui lòng thử lại.");
+  }
+}
 
 const modules = [
   {
@@ -123,6 +175,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pendingSurveyModule, setPendingSurveyModule] =
     useState<BranchModule | null>(null);
 
@@ -193,6 +246,31 @@ export default function DashboardPage() {
 
   const shouldCheckSurvey = (mod: ModuleItem): mod is BranchModule =>
     mod.id === "farm" || mod.id === "factory" || mod.id === "shop";
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setToastMessage(null);
+    setIsLoggingOut(true);
+
+    const token = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+
+    try {
+      if (token) {
+        await requestLogout(token);
+      }
+
+      clearStoredAuthSession();
+      router.replace("/");
+    } catch (error) {
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể đăng xuất. Vui lòng thử lại.",
+      );
+      setIsLoggingOut(false);
+    }
+  };
 
   const handleModuleClick =
     (mod: ModuleItem) => async (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -365,18 +443,23 @@ export default function DashboardPage() {
                 </div>
                 <span className="truncate font-medium">Nguyễn Văn A</span>
               </div>
-              <Link
-                href="/"
-                className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-red-50"
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-60"
                 style={{
                   color: "var(--mevi-text-muted)",
-                  textDecoration: "none",
                 }}
-                title="Đăng xuất"
+                title="Thoát"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Đăng xuất</span>
-              </Link>
+                {isLoggingOut ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
+                <span>{isLoggingOut ? "Đang thoát..." : "Thoát"}</span>
+              </button>
             </>
           }
         />

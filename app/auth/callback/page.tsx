@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
@@ -129,8 +129,22 @@ function buildAuthMeUrl() {
   return new URL("/auth/me", SSO_API_BASE).toString();
 }
 
+function buildLogoutUrl() {
+  return new URL("/auth/logout", SSO_API_BASE).toString();
+}
+
 function clearStoredAuthSession() {
   AUTH_SESSION_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
+}
+
+function getApiErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const normalizedPayload = normalizeObjectKeys(payload);
+  const record = toRecord(normalizedPayload);
+  const message = getStringClaim(record, ["message", "error"]);
+
+  return message;
 }
 
 async function fetchCurrentUser(token: string): Promise<AuthMeProfile> {
@@ -144,16 +158,30 @@ async function fetchCurrentUser(token: string): Promise<AuthMeProfile> {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const normalizedPayload = normalizeObjectKeys(payload);
-    const message = getStringClaim(toRecord(normalizedPayload), [
-      "message",
-      "error",
-    ]);
+    const message = getApiErrorMessage(payload);
 
     throw new Error(message || "Token SSO không hợp lệ hoặc đã hết hạn.");
   }
 
   return getAuthMeProfile(payload);
+}
+
+async function requestLogout(token: string) {
+  const response = await fetch(buildLogoutUrl(), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    const message = getApiErrorMessage(payload);
+
+    throw new Error(message || "Không thể thoát phiên đăng nhập.");
+  }
 }
 
 function getSurveyLookup(
@@ -208,7 +236,9 @@ function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
+  const isExitRequestedRef = useRef(false);
   const [callbackError, setCallbackError] = useState<string | null>(null);
+  const [isExiting, setIsExiting] = useState(false);
   const error =
     callbackError ??
     (token ? null : "Không nhận được token SSO. Vui lòng thử truy cập lại.");
@@ -217,6 +247,7 @@ function AuthCallbackContent() {
     if (!token) return;
 
     let isActive = true;
+    isExitRequestedRef.current = false;
 
     async function syncAuthenticatedUser() {
       try {
@@ -250,7 +281,7 @@ function AuthCallbackContent() {
             ? lookup.value
             : getStringClaim(payload, ["userId", "user_id", "sub", "id"]));
 
-        if (!isActive) return;
+        if (!isActive || isExitRequestedRef.current) return;
 
         window.sessionStorage.setItem(
           USER_PROFILE_STORAGE_KEY,
@@ -277,7 +308,7 @@ function AuthCallbackContent() {
 
         router.replace(buildSurveyUrl(lookup));
       } catch (error) {
-        if (!isActive) return;
+        if (!isActive || isExitRequestedRef.current) return;
 
         clearStoredAuthSession();
         setCallbackError(
@@ -295,6 +326,34 @@ function AuthCallbackContent() {
     };
   }, [router, token]);
 
+  const handleExit = async () => {
+    if (isExiting) return;
+
+    isExitRequestedRef.current = true;
+    setIsExiting(true);
+    setCallbackError(null);
+
+    const storedToken = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const logoutToken = token || storedToken;
+
+    try {
+      if (logoutToken) {
+        await requestLogout(logoutToken);
+      }
+
+      clearStoredAuthSession();
+      router.replace("/");
+    } catch (error) {
+      clearStoredAuthSession();
+      setCallbackError(
+        error instanceof Error
+          ? error.message
+          : "Không thể thoát phiên đăng nhập.",
+      );
+      setIsExiting(false);
+    }
+  };
+
   const feedback = useMemo(
     () =>
       error
@@ -303,15 +362,26 @@ function AuthCallbackContent() {
     [error],
   );
 
-  return <AuthCallbackShell error={error} feedback={feedback} />;
+  return (
+    <AuthCallbackShell
+      error={error}
+      feedback={feedback}
+      isExiting={isExiting}
+      onExit={handleExit}
+    />
+  );
 }
 
 function AuthCallbackShell({
   error,
   feedback,
+  isExiting = false,
+  onExit,
 }: {
   error?: string | null;
   feedback: string;
+  isExiting?: boolean;
+  onExit?: () => void;
 }) {
   return (
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
@@ -360,6 +430,27 @@ function AuthCallbackShell({
               >
                 {error}
               </p>
+            )}
+
+            {onExit && (
+              <button
+                type="button"
+                onClick={onExit}
+                disabled={isExiting}
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-60"
+                style={{
+                  color: "var(--mevi-text-muted)",
+                  border: "1px solid var(--mevi-border)",
+                  background: "rgba(255, 255, 255, 0.72)",
+                }}
+              >
+                {isExiting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
+                <span>{isExiting ? "Đang thoát..." : "Thoát"}</span>
+              </button>
             )}
           </section>
         </main>
