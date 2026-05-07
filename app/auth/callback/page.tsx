@@ -6,37 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
 import { DecorativeLeaves } from "@/app/survey/_components/decorative-leaves";
+import type { AuthMeProfile } from "@/features/auth/api";
+import { useAuthMeMutation, useLogoutMutation } from "@/features/auth/hooks";
+import {
+  TOKEN_STORAGE_KEY,
+  USER_PROFILE_STORAGE_KEY,
+  clearStoredAuthSession,
+  getStoredAccessToken,
+} from "@/features/auth/utils";
 import { DEFAULT_SURVEY_LOOKUP_VALUE } from "@/features/survey/constants/survey.constants";
 
 type SurveyLookupType = "phone" | "email" | "code" | "userId";
 type JwtPayload = Record<string, unknown>;
 
-const SSO_API_BASE =
-  process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ?? "http://api-be-mevi.otechz.com";
 const SSO_PROVIDER = "center";
-const TOKEN_STORAGE_KEY = "mevi_access_token";
-const USER_PROFILE_STORAGE_KEY = "mevi_user_profile";
-const AUTH_SESSION_KEYS = [
-  TOKEN_STORAGE_KEY,
-  USER_PROFILE_STORAGE_KEY,
-  "mevi_sso_provider",
-  "mevi_user_identifier",
-  "mevi_user_lookup_type",
-  "mevi_user_email",
-  "mevi_user_name",
-  "mevi_session_id",
-  "mevi_company_id",
-  "mevi_user_id",
-] as const;
-
-type AuthMeProfile = {
-  userId?: string | null;
-  email?: string | null;
-  name?: string | null;
-  provider?: string | null;
-  sessionId?: string | null;
-  companyId?: string | number | null;
-};
 
 function decodeJwtPayload(token: string): JwtPayload | null {
   const payload = token.split(".")[1];
@@ -72,116 +55,6 @@ function getStringClaim(payload: JwtPayload | null, keys: string[]) {
   }
 
   return null;
-}
-
-function normalizeObjectKeys<T>(input: T): T {
-  if (Array.isArray(input)) {
-    return input.map((item) => normalizeObjectKeys(item)) as T;
-  }
-
-  if (input && typeof input === "object") {
-    return Object.fromEntries(
-      Object.entries(input).map(([key, value]) => [
-        key.endsWith(":") ? key.slice(0, -1) : key,
-        normalizeObjectKeys(value),
-      ]),
-    ) as T;
-  }
-
-  return input;
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object"
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
-function getAuthMeProfile(payload: unknown): AuthMeProfile {
-  const normalizedPayload = normalizeObjectKeys(payload);
-  const root = toRecord(normalizedPayload);
-  const data = toRecord(root?.data);
-  const profile = data ?? root;
-
-  if (!profile) return {};
-
-  return {
-    userId: getStringClaim(profile, ["userId", "user_id", "sub", "id"]),
-    email: getStringClaim(profile, ["email", "mail"]),
-    name: getStringClaim(profile, [
-      "name",
-      "fullName",
-      "full_name",
-      "preferred_username",
-    ]),
-    provider: getStringClaim(profile, ["provider"]),
-    sessionId: getStringClaim(profile, ["sessionId", "session_id", "sid"]),
-    companyId: getStringClaim(profile, [
-      "companyId",
-      "company_id",
-      "tenantId",
-      "tenant_id",
-    ]),
-  };
-}
-
-function buildAuthMeUrl() {
-  return new URL("/auth/me", SSO_API_BASE).toString();
-}
-
-function buildLogoutUrl() {
-  return new URL("/auth/logout", SSO_API_BASE).toString();
-}
-
-function clearStoredAuthSession() {
-  AUTH_SESSION_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
-}
-
-function getApiErrorMessage(payload: unknown) {
-  if (!payload || typeof payload !== "object") return null;
-
-  const normalizedPayload = normalizeObjectKeys(payload);
-  const record = toRecord(normalizedPayload);
-  const message = getStringClaim(record, ["message", "error"]);
-
-  return message;
-}
-
-async function fetchCurrentUser(token: string): Promise<AuthMeProfile> {
-  const response = await fetch(buildAuthMeUrl(), {
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const message = getApiErrorMessage(payload);
-
-    throw new Error(message || "Token SSO không hợp lệ hoặc đã hết hạn.");
-  }
-
-  return getAuthMeProfile(payload);
-}
-
-async function requestLogout(token: string) {
-  const response = await fetch(buildLogoutUrl(), {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    const message = getApiErrorMessage(payload);
-
-    throw new Error(message || "Không thể thoát phiên đăng nhập.");
-  }
 }
 
 function getSurveyLookup(
@@ -236,9 +109,11 @@ function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
+  const { mutateAsync: getCurrentUser } = useAuthMeMutation();
+  const { mutateAsync: logoutSession, isPending: isExiting } =
+    useLogoutMutation();
   const isExitRequestedRef = useRef(false);
   const [callbackError, setCallbackError] = useState<string | null>(null);
-  const [isExiting, setIsExiting] = useState(false);
   const error =
     callbackError ??
     (token ? null : "Không nhận được token SSO. Vui lòng thử truy cập lại.");
@@ -255,9 +130,10 @@ function AuthCallbackContent() {
         window.sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
 
         const payload = decodeJwtPayload(token);
-        const profile = await fetchCurrentUser(token);
+        const profile = await getCurrentUser(token);
         const lookup = getSurveyLookup(payload, profile);
-        const email = profile.email ?? getStringClaim(payload, ["email", "mail"]);
+        const email =
+          profile.email ?? getStringClaim(payload, ["email", "mail"]);
         const name =
           profile.name ??
           getStringClaim(payload, [
@@ -324,21 +200,20 @@ function AuthCallbackContent() {
     return () => {
       isActive = false;
     };
-  }, [router, token]);
+  }, [getCurrentUser, router, token]);
 
   const handleExit = async () => {
     if (isExiting) return;
 
     isExitRequestedRef.current = true;
-    setIsExiting(true);
     setCallbackError(null);
 
-    const storedToken = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const storedToken = getStoredAccessToken();
     const logoutToken = token || storedToken;
 
     try {
       if (logoutToken) {
-        await requestLogout(logoutToken);
+        await logoutSession(logoutToken);
       }
 
       clearStoredAuthSession();
@@ -350,15 +225,12 @@ function AuthCallbackContent() {
           ? error.message
           : "Không thể thoát phiên đăng nhập.",
       );
-      setIsExiting(false);
     }
   };
 
   const feedback = useMemo(
     () =>
-      error
-        ? "Xác thực chưa hoàn tất"
-        : "Đang xác thực tài khoản MEVI Farm...",
+      error ? "Xác thực chưa hoàn tất" : "Đang xác thực tài khoản MEVI Farm...",
     [error],
   );
 

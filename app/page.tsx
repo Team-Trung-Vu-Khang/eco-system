@@ -17,7 +17,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 const SSO_API_BASE =
-  process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ?? "http://api-be-mevi.otechz.com";
+  process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ??
+  "https://api-be-mevi.otechz.com";
 const SSO_PROVIDER = "center";
 
 function buildSsoLoginUrl(origin: string) {

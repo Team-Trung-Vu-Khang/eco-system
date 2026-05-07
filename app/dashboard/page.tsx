@@ -15,11 +15,16 @@ import { useEffect, useState } from "react";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
+import { useLogoutMutation } from "@/features/auth/hooks";
+import {
+  clearStoredAuthSession,
+  getStoredAccessToken,
+} from "@/features/auth/utils";
 import {
   DEFAULT_SURVEY_LOOKUP_VALUE,
   SURVEY_META,
 } from "@/features/survey/constants/survey.constants";
-import { fetchSurveyDetail } from "@/features/survey/api";
+import { useSurveyDetailMutation } from "@/features/survey/hooks";
 import type {
   SurveyLookupType,
   SurveyRequestType,
@@ -27,59 +32,6 @@ import type {
 import { getStoredLookupType } from "@/features/survey/utils/survey-flow";
 
 /* ===== Module Data ===== */
-
-const SSO_API_BASE =
-  process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ?? "http://api-be-mevi.otechz.com";
-const TOKEN_STORAGE_KEY = "mevi_access_token";
-const AUTH_SESSION_KEYS = [
-  TOKEN_STORAGE_KEY,
-  "mevi_user_profile",
-  "mevi_sso_provider",
-  "mevi_user_identifier",
-  "mevi_user_lookup_type",
-  "mevi_user_email",
-  "mevi_user_name",
-  "mevi_session_id",
-  "mevi_company_id",
-  "mevi_user_id",
-] as const;
-
-function buildLogoutUrl() {
-  return new URL("/auth/logout", SSO_API_BASE).toString();
-}
-
-function clearStoredAuthSession() {
-  AUTH_SESSION_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
-}
-
-function getLogoutErrorMessage(payload: unknown) {
-  if (!payload || typeof payload !== "object") return null;
-
-  const record = payload as Record<string, unknown>;
-  const message = record.message ?? record.error;
-
-  return typeof message === "string" && message.trim()
-    ? message.trim()
-    : null;
-}
-
-async function requestLogout(token: string) {
-  const response = await fetch(buildLogoutUrl(), {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    const message = getLogoutErrorMessage(payload);
-
-    throw new Error(message || "Không thể đăng xuất. Vui lòng thử lại.");
-  }
-}
 
 const modules = [
   {
@@ -173,11 +125,13 @@ function DecorativeLeaves() {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const logoutMutation = useLogoutMutation();
+  const surveyDetailMutation = useSurveyDetailMutation();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [pendingSurveyModule, setPendingSurveyModule] =
     useState<BranchModule | null>(null);
+  const isLoggingOut = logoutMutation.isPending;
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -251,13 +205,12 @@ export default function DashboardPage() {
     if (isLoggingOut) return;
 
     setToastMessage(null);
-    setIsLoggingOut(true);
 
-    const token = window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    const token = getStoredAccessToken();
 
     try {
       if (token) {
-        await requestLogout(token);
+        await logoutMutation.mutateAsync(token);
       }
 
       clearStoredAuthSession();
@@ -268,7 +221,6 @@ export default function DashboardPage() {
           ? error.message
           : "Không thể đăng xuất. Vui lòng thử lại.",
       );
-      setIsLoggingOut(false);
     }
   };
 
@@ -286,15 +238,15 @@ export default function DashboardPage() {
       const lookup = getSurveyLookup();
 
       try {
-        const surveyDetail = await fetchSurveyDetail(
-          mod.id,
-          lookup.value,
-          lookup.type as SurveyLookupType,
-          {
+        const surveyDetail = await surveyDetailMutation.mutateAsync({
+          type: mod.id,
+          value: lookup.value,
+          lookupType: lookup.type as SurveyLookupType,
+          context: {
             companyId: lookup.companyId,
             userId: lookup.type === "userId" ? lookup.value : lookup.userId,
           },
-        );
+        });
 
         setLoadingModuleId(null);
 
@@ -466,149 +418,149 @@ export default function DashboardPage() {
 
         {/* Main Content */}
         <main className="flex w-full flex-1 flex-col items-center px-4 pb-10 pt-4 sm:px-6 md:px-8 md:pb-14 md:pt-8">
-        {/* Section Header */}
-        <div
-          className="mb-8 text-center opacity-0 animate-fade-in-up delay-100 md:mb-10"
-          style={{ animationFillMode: "forwards" }}
-        >
-          <h2
-            className="text-2xl font-bold tracking-tight md:text-3xl"
-            style={{ color: "var(--mevi-text-primary)" }}
+          {/* Section Header */}
+          <div
+            className="mb-8 text-center opacity-0 animate-fade-in-up delay-100 md:mb-10"
+            style={{ animationFillMode: "forwards" }}
           >
-            Hệ sinh thái MEVI
-          </h2>
-          <p
-            className="mt-2 text-sm md:text-base"
-            style={{ color: "var(--mevi-text-secondary)" }}
-          >
-            Chuỗi giá trị nông nghiệp khép kín — từ kiến thức đến thị trường
-          </p>
-        </div>
+            <h2
+              className="text-2xl font-bold tracking-tight md:text-3xl"
+              style={{ color: "var(--mevi-text-primary)" }}
+            >
+              Hệ sinh thái MEVI
+            </h2>
+            <p
+              className="mt-2 text-sm md:text-base"
+              style={{ color: "var(--mevi-text-secondary)" }}
+            >
+              Chuỗi giá trị nông nghiệp khép kín — từ kiến thức đến thị trường
+            </p>
+          </div>
 
-        {/* Connection Flow Visualization */}
-        <div
-          className="mb-10 hidden w-full max-w-3xl items-center justify-center opacity-0 animate-fade-in-up delay-200 md:flex"
-          style={{ animationFillMode: "forwards" }}
-        >
-          <div className="flex items-center justify-center w-full">
-            {modules.map((mod, i) => {
-              const Icon = mod.icon;
-              return (
-                <div key={mod.id} className="flex items-center">
-                  <a
-                    href={mod.href}
-                    onClick={handleModuleClick(mod)}
-                    className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
-                    style={{ textDecoration: "none" }}
-                  >
-                    <div
-                      className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
-                      style={{ width: 48, height: 48, borderRadius: 14 }}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <span
-                      className="text-xs font-semibold"
-                      style={{ color: "var(--mevi-text-secondary)" }}
-                    >
-                      {mod.name.replace("Mevi ", "")}
-                    </span>
-                  </a>
-                  {i < modules.length - 1 && (
-                    <div
-                      className="w-16 mx-3 flex items-center justify-center"
-                      style={{ marginTop: "-20px" }}
+          {/* Connection Flow Visualization */}
+          <div
+            className="mb-10 hidden w-full max-w-3xl items-center justify-center opacity-0 animate-fade-in-up delay-200 md:flex"
+            style={{ animationFillMode: "forwards" }}
+          >
+            <div className="flex items-center justify-center w-full">
+              {modules.map((mod, i) => {
+                const Icon = mod.icon;
+                return (
+                  <div key={mod.id} className="flex items-center">
+                    <a
+                      href={mod.href}
+                      onClick={handleModuleClick(mod)}
+                      className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
+                      style={{ textDecoration: "none" }}
                     >
                       <div
-                        className="h-0.5 w-full rounded-full animate-grow-line"
-                        style={{
-                          background:
-                            "linear-gradient(90deg, var(--mevi-green-200), var(--mevi-green-300), var(--mevi-green-200))",
-                          animationDelay: `${0.4 + i * 0.2}s`,
-                          animationFillMode: "forwards",
-                          opacity: 0.7,
-                        }}
-                      ></div>
+                        className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
+                        style={{ width: 48, height: 48, borderRadius: 14 }}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: "var(--mevi-text-secondary)" }}
+                      >
+                        {mod.name.replace("Mevi ", "")}
+                      </span>
+                    </a>
+                    {i < modules.length - 1 && (
+                      <div
+                        className="w-16 mx-3 flex items-center justify-center"
+                        style={{ marginTop: "-20px" }}
+                      >
+                        <div
+                          className="h-0.5 w-full rounded-full animate-grow-line"
+                          style={{
+                            background:
+                              "linear-gradient(90deg, var(--mevi-green-200), var(--mevi-green-300), var(--mevi-green-200))",
+                            animationDelay: `${0.4 + i * 0.2}s`,
+                            animationFillMode: "forwards",
+                            opacity: 0.7,
+                          }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Module Cards Grid */}
+          <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+            {modules.map((mod, i) => {
+              const Icon = mod.icon;
+              const isActive = mod.status === "Hoạt động";
+              return (
+                <a
+                  key={mod.id}
+                  href={mod.href}
+                  onClick={handleModuleClick(mod)}
+                  className={`mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`}
+                  style={{
+                    animationDelay: `${0.3 + i * 0.1}s`,
+                    animationFillMode: "forwards",
+                    textDecoration: "none",
+                  }}
+                >
+                  {/* Card Header */}
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className={`mevi-module-icon ${mod.variant}`}>
+                      <Icon className="w-6 h-6" />
                     </div>
-                  )}
-                </div>
+                    <span
+                      className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-right"
+                      style={{
+                        background: isActive
+                          ? "rgba(16, 185, 129, 0.1)"
+                          : "rgba(156, 163, 175, 0.1)",
+                        color: isActive
+                          ? "var(--mevi-green-700)"
+                          : "var(--mevi-text-muted)",
+                        border: isActive
+                          ? "1px solid rgba(16, 185, 129, 0.2)"
+                          : "1px solid rgba(156, 163, 175, 0.2)",
+                      }}
+                    >
+                      {mod.status}
+                    </span>
+                  </div>
+
+                  {/* Card Body */}
+                  <h4
+                    className="text-base font-bold mb-1.5"
+                    style={{ color: "var(--mevi-text-primary)" }}
+                  >
+                    {mod.name}
+                  </h4>
+                  <p
+                    className="text-sm leading-relaxed mb-4"
+                    style={{ color: "var(--mevi-text-secondary)" }}
+                  >
+                    {mod.description}
+                  </p>
+                  <p
+                    className="text-xs leading-relaxed mb-5"
+                    style={{ color: "var(--mevi-text-muted)" }}
+                  >
+                    {mod.longDesc}
+                  </p>
+
+                  {/* Card Footer */}
+                  <div
+                    className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
+                    style={{ color: "var(--mevi-green-600)" }}
+                  >
+                    <span>Truy cập</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                  </div>
+                </a>
               );
             })}
           </div>
-        </div>
-
-        {/* Module Cards Grid */}
-        <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
-          {modules.map((mod, i) => {
-            const Icon = mod.icon;
-            const isActive = mod.status === "Hoạt động";
-            return (
-              <a
-                key={mod.id}
-                href={mod.href}
-                onClick={handleModuleClick(mod)}
-                className={`mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`}
-                style={{
-                  animationDelay: `${0.3 + i * 0.1}s`,
-                  animationFillMode: "forwards",
-                  textDecoration: "none",
-                }}
-              >
-                {/* Card Header */}
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div className={`mevi-module-icon ${mod.variant}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-right"
-                    style={{
-                      background: isActive
-                        ? "rgba(16, 185, 129, 0.1)"
-                        : "rgba(156, 163, 175, 0.1)",
-                      color: isActive
-                        ? "var(--mevi-green-700)"
-                        : "var(--mevi-text-muted)",
-                      border: isActive
-                        ? "1px solid rgba(16, 185, 129, 0.2)"
-                        : "1px solid rgba(156, 163, 175, 0.2)",
-                    }}
-                  >
-                    {mod.status}
-                  </span>
-                </div>
-
-                {/* Card Body */}
-                <h4
-                  className="text-base font-bold mb-1.5"
-                  style={{ color: "var(--mevi-text-primary)" }}
-                >
-                  {mod.name}
-                </h4>
-                <p
-                  className="text-sm leading-relaxed mb-4"
-                  style={{ color: "var(--mevi-text-secondary)" }}
-                >
-                  {mod.description}
-                </p>
-                <p
-                  className="text-xs leading-relaxed mb-5"
-                  style={{ color: "var(--mevi-text-muted)" }}
-                >
-                  {mod.longDesc}
-                </p>
-
-                {/* Card Footer */}
-                <div
-                  className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
-                  style={{ color: "var(--mevi-green-600)" }}
-                >
-                  <span>Truy cập</span>
-                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </div>
-              </a>
-            );
-          })}
-        </div>
         </main>
       </div>
 
