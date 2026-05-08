@@ -33,6 +33,8 @@ const audienceOptions: Array<{
   },
 ];
 
+const DEFAULT_REGISTERED_PASSWORD = "123456";
+
 type RegistrationFormValues = {
   fullName: string;
   phoneNumber: string;
@@ -495,6 +497,12 @@ export default function RegistrationPage() {
                   {submittedData.birthYear}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700 sm:text-sm md:hidden">
+                  Tài khoản: {submittedData.phoneNumber}
+                </p>
+                <p className="mt-1 text-xs text-emerald-700 sm:text-sm md:hidden">
+                  Mật khẩu: {DEFAULT_REGISTERED_PASSWORD}
+                </p>
+                <p className="mt-1 text-xs text-emerald-700 sm:text-sm md:hidden">
                   Khu vực: {submittedData.operatingArea}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700 sm:text-sm md:hidden">
@@ -503,6 +511,10 @@ export default function RegistrationPage() {
                 <p className="mt-1 hidden text-xs text-emerald-700 md:block">
                   {submittedData.phoneNumber} · {submittedData.operatingArea} ·{" "}
                   {submittedAudienceLabel}
+                </p>
+                <p className="mt-1 hidden text-xs font-semibold text-emerald-800 md:block">
+                  Tài khoản: {submittedData.phoneNumber} · Mật khẩu:{" "}
+                  {DEFAULT_REGISTERED_PASSWORD}
                 </p>
               </div>
             ) : null}

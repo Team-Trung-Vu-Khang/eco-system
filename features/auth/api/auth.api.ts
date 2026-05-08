@@ -150,38 +150,6 @@ function getAccessTokenFromHeaders(headers: Headers) {
   return accessToken?.trim() || null;
 }
 
-function getAuthMeProfile(payload: unknown): AuthMeProfile {
-  const normalizedPayload = normalizeObjectKeys(payload);
-  const root = toRecord(normalizedPayload);
-  const data = toRecord(root?.data);
-  const profile = data ?? root;
-
-  if (!profile) return {};
-
-  return {
-    userId: getStringClaim(profile, ["userId", "user_id", "sub", "id"]),
-    email: getStringClaim(profile, ["email", "mail"]),
-    name: getStringClaim(profile, [
-      "name",
-      "fullName",
-      "full_name",
-      "preferred_username",
-    ]),
-    provider: getStringClaim(profile, ["provider"]),
-    sessionId: getStringClaim(profile, ["sessionId", "session_id", "sid"]),
-    companyId: getStringClaim(profile, [
-      "companyId",
-      "company_id",
-      "tenantId",
-      "tenant_id",
-    ]),
-    mustChangePassword: getBooleanClaim(profile, [
-      "mustChangePassword",
-      "must_change_password",
-    ]),
-  };
-}
-
 export async function fetchCurrentAuthUser(
   token: string,
 ): Promise<AuthMeProfile> {
@@ -200,7 +168,7 @@ export async function fetchCurrentAuthUser(
     throw new Error(message || "Token SSO không hợp lệ hoặc đã hết hạn.");
   }
 
-  return getAuthMeProfile(payload);
+  return payload;
 }
 
 export async function logoutMeviSession(token: string) {

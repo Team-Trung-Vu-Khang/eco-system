@@ -84,7 +84,7 @@ function AuthCallbackContent() {
         const phone = profile?.phoneNumber || "";
         const companyId = profile?.companyId || "";
         const userId = profile?.userId || "";
-
+        console.log(profile);
         if (!isActive || isExitRequestedRef.current) return;
 
         window.sessionStorage.setItem(
