@@ -34,6 +34,7 @@ import { useSurveyDetailMutation } from "@/features/survey/hooks";
 import type {
   SurveyLookupType,
   SurveyRequestType,
+  SurveyResultDetails,
 } from "@/features/survey/api";
 import { getStoredLookupType } from "@/features/survey/utils/survey-flow";
 
@@ -97,6 +98,14 @@ type ChangePasswordFormValues = {
   newPassword: string;
   confirmPassword: string;
 };
+
+function hasPendingSurvey(surveyDetail: SurveyResultDetails | null) {
+  return Boolean(
+    surveyDetail &&
+      surveyDetail.status !== "submitted" &&
+      !surveyDetail.submittedAt,
+  );
+}
 
 function getDisplayName(
   profile: {
@@ -274,6 +283,26 @@ export default function DashboardPage() {
     router.push(`/survey?${surveyParams.toString()}`);
   };
 
+  const goToGeneralSurvey = () => {
+    const lookup = getSurveyLookup();
+    const surveyParams = new URLSearchParams({
+      surveyType: "general",
+      source: "login",
+      returnTo: "/dashboard",
+      phone: lookup.value,
+    });
+
+    if (lookup.companyId) {
+      surveyParams.set("companyId", lookup.companyId);
+    }
+
+    if (lookup.userId) {
+      surveyParams.set("userId", lookup.userId);
+    }
+
+    router.push(`/survey?${surveyParams.toString()}`);
+  };
+
   const shouldCheckSurvey = (mod: ModuleItem): mod is BranchModule =>
     mod.id === "farm" || mod.id === "factory" || mod.id === "shop";
 
@@ -321,9 +350,35 @@ export default function DashboardPage() {
           USER_PROFILE_STORAGE_KEY,
           JSON.stringify(refreshedProfile.data),
         );
+
+        if (refreshedProfile.data.phoneNumber) {
+          window.sessionStorage.setItem(
+            "mevi_user_identifier",
+            refreshedProfile.data.phoneNumber,
+          );
+        }
       }
 
       resetPasswordForm();
+
+      try {
+        const lookup = getSurveyLookup();
+        const surveyDetail = await surveyDetailMutation.mutateAsync({
+          type: "general",
+          value: lookup.value,
+          lookupType: "phone",
+          context: {
+            companyId: lookup.companyId,
+            userId: lookup.userId,
+          },
+        });
+
+        if (hasPendingSurvey(surveyDetail)) {
+          goToGeneralSurvey();
+        }
+      } catch {
+        // Password change has already succeeded; survey check can be retried later.
+      }
     } catch (error) {
       setPasswordChangeError(
         error instanceof Error
@@ -500,11 +555,7 @@ export default function DashboardPage() {
                       "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
                   }}
                 >
-                  {authMeQuery.isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    userInitials
-                  )}
+                  {userInitials}
                 </div>
                 <span className="truncate font-medium">{displayName}</span>
               </div>
@@ -531,20 +582,7 @@ export default function DashboardPage() {
 
         {/* Main Content */}
         <main className="flex w-full flex-1 flex-col items-center px-4 pb-10 pt-4 sm:px-6 md:px-8 md:pb-14 md:pt-8">
-          {authMeQuery.isLoading ? (
-            <section className="flex flex-1 flex-col items-center justify-center gap-3">
-              <Loader2
-                className="h-8 w-8 animate-spin"
-                style={{ color: "var(--mevi-green-700)" }}
-              />
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--mevi-text-secondary)" }}
-              >
-                Đang kiểm tra tài khoản...
-              </p>
-            </section>
-          ) : mustChangePassword ? (
+          {mustChangePassword ? (
             <section className="mevi-login-card mx-auto flex w-full max-w-md flex-col rounded-[24px] p-5 opacity-0 animate-fade-in-up sm:p-6">
               <div className="mb-5 flex items-start gap-3">
                 <div
