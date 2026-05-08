@@ -117,9 +117,7 @@ export function SurveyPageContent() {
     }
 
     const storedValue =
-      window.sessionStorage.getItem("mevi_user_identifier") ??
-      window.sessionStorage.getItem("mevi_user_email") ??
-      DEFAULT_SURVEY_LOOKUP_VALUE;
+      window.sessionStorage.getItem("mevi_user_identifier") || "";
 
     return {
       type: getStoredLookupType(storedValue),
@@ -186,7 +184,7 @@ export function SurveyPageContent() {
 
     return Boolean(
       surveyDetail &&
-        (surveyDetail.status === "submitted" || surveyDetail.submittedAt),
+      (surveyDetail.status === "submitted" || surveyDetail.submittedAt),
     );
   });
 

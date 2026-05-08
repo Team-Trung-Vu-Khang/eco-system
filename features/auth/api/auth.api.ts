@@ -4,7 +4,7 @@ export const AUTH_API_BASE =
 
 export type AuthMeProfile = {
   userId?: string | null;
-  phone?: string | null;
+  phoneNumber?: string | null;
   email?: string | null;
   name?: string | null;
   provider?: string | null;

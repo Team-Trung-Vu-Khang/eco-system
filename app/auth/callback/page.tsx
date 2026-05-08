@@ -1,12 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
 import { DecorativeLeaves } from "@/app/survey/_components/decorative-leaves";
-import type { AuthMeProfile } from "@/features/auth/api";
 import { useAuthMeMutation, useLogoutMutation } from "@/features/auth/hooks";
 import {
   USER_PROFILE_STORAGE_KEY,
@@ -14,77 +13,19 @@ import {
   getStoredAccessToken,
   setStoredAccessToken,
 } from "@/features/auth/utils";
-import { DEFAULT_SURVEY_LOOKUP_VALUE } from "@/features/survey/constants/survey.constants";
 import {
   fetchSurveyDetail,
   type SurveyRequestContext,
   type SurveyResultDetails,
 } from "@/features/survey/api";
 
-type JwtPayload = Record<string, unknown>;
-type PhoneSurveyLookup = {
-  type: "phone";
-  value: string;
-};
-
-const SSO_PROVIDER = "center";
-
-function decodeJwtPayload(token: string): JwtPayload | null {
-  const payload = token.split(".")[1];
-
-  if (!payload) return null;
-
-  try {
-    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const paddedPayload = normalizedPayload.padEnd(
-      Math.ceil(normalizedPayload.length / 4) * 4,
-      "=",
-    );
-
-    return JSON.parse(window.atob(paddedPayload)) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
-
-function getStringClaim(payload: JwtPayload | null, keys: string[]) {
-  if (!payload) return null;
-
-  for (const key of keys) {
-    const value = payload[key];
-
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-
-    if (typeof value === "number") {
-      return String(value);
-    }
-  }
-
-  return null;
-}
-
-function getSurveyLookup(
-  payload: JwtPayload | null,
-  profile?: AuthMeProfile,
-): PhoneSurveyLookup {
-  const profilePhone = profile?.phone?.trim();
-  if (profilePhone) return { type: "phone", value: profilePhone };
-
-  const phone = getStringClaim(payload, ["phone"]);
-  if (phone) return { type: "phone", value: phone };
-
-  return { type: "phone", value: DEFAULT_SURVEY_LOOKUP_VALUE };
-}
-
-function buildSurveyUrl(lookup: PhoneSurveyLookup) {
+function buildSurveyUrl(phone: string) {
   const surveyParams = new URLSearchParams({
     surveyType: "general",
     source: "login",
     returnTo: "/dashboard",
-    type: lookup.type,
-    [lookup.type]: lookup.value,
+    type: "phone",
+    phone,
   });
 
   const companyId = window.sessionStorage.getItem("mevi_company_id");
@@ -138,12 +79,9 @@ function AuthCallbackContent() {
         clearStoredAuthSession();
         setStoredAccessToken(token);
 
-        const payload = decodeJwtPayload(token);
         const profile = await getCurrentUser(token);
-        const lookup = getSurveyLookup(payload, profile);
-        const email = profile?.email || "";
         const name = profile?.name || "";
-        const provider = profile?.provider || SSO_PROVIDER;
+        const phone = profile?.phoneNumber || "";
         const companyId = profile?.companyId || "";
         const userId = profile?.userId || "";
 
@@ -153,18 +91,11 @@ function AuthCallbackContent() {
           USER_PROFILE_STORAGE_KEY,
           JSON.stringify(profile),
         );
-        window.sessionStorage.setItem("mevi_sso_provider", provider);
-        window.sessionStorage.setItem("mevi_user_identifier", lookup.value);
-        window.sessionStorage.setItem("mevi_user_lookup_type", lookup.type);
-        window.sessionStorage.setItem("mevi_user_email", email || lookup.value);
+        window.sessionStorage.setItem("mevi_user_identifier", phone);
         window.sessionStorage.setItem(
           "mevi_user_name",
           name || "Tài khoản quản trị MEVI",
         );
-
-        if (profile.sessionId) {
-          window.sessionStorage.setItem("mevi_session_id", profile.sessionId);
-        }
 
         if (companyId) {
           window.sessionStorage.setItem("mevi_company_id", String(companyId));
@@ -180,8 +111,8 @@ function AuthCallbackContent() {
         try {
           const surveyDetail = await fetchSurveyDetail(
             "general",
-            lookup.value,
-            lookup.type,
+            phone,
+            "phone",
             getStoredSurveyContext(),
           );
 
@@ -189,7 +120,7 @@ function AuthCallbackContent() {
 
           router.replace(
             hasPendingSurvey(surveyDetail)
-              ? buildSurveyUrl(lookup)
+              ? buildSurveyUrl(phone)
               : "/dashboard",
           );
         } catch {
@@ -237,11 +168,9 @@ function AuthCallbackContent() {
     }
   };
 
-  const feedback = useMemo(
-    () =>
-      error ? "Xác thực chưa hoàn tất" : "Đang xác thực tài khoản MEVI Farm...",
-    [error],
-  );
+  const feedback = error
+    ? "Xác thực chưa hoàn tất"
+    : "Đang xác thực tài khoản MEVI Farm...";
 
   return (
     <AuthCallbackShell

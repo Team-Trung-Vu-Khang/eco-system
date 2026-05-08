@@ -208,10 +208,11 @@ export default function DashboardPage() {
       confirmPassword: "",
     },
   });
-  const newPasswordValue = useWatch({
-    control: passwordFormControl,
-    name: "newPassword",
-  }) ?? "";
+  const newPasswordValue =
+    useWatch({
+      control: passwordFormControl,
+      name: "newPassword",
+    }) ?? "";
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -245,9 +246,7 @@ export default function DashboardPage() {
 
   const getSurveyLookup = () => {
     const storedValue =
-      window.sessionStorage.getItem("mevi_user_identifier") ??
-      window.sessionStorage.getItem("mevi_user_email") ??
-      DEFAULT_SURVEY_LOOKUP_VALUE;
+      window.sessionStorage.getItem("mevi_user_identifier") || "";
     const lookupType = getStoredLookupType(storedValue);
 
     return {
@@ -671,149 +670,150 @@ export default function DashboardPage() {
             </section>
           ) : (
             <>
-          {/* Section Header */}
-          <div
-            className="mb-8 text-center opacity-0 animate-fade-in-up delay-100 md:mb-10"
-            style={{ animationFillMode: "forwards" }}
-          >
-            <h2
-              className="text-2xl font-bold tracking-tight md:text-3xl"
-              style={{ color: "var(--mevi-text-primary)" }}
-            >
-              Hệ sinh thái MEVI
-            </h2>
-            <p
-              className="mt-2 text-sm md:text-base"
-              style={{ color: "var(--mevi-text-secondary)" }}
-            >
-              Chuỗi giá trị nông nghiệp khép kín — từ kiến thức đến thị trường
-            </p>
-          </div>
+              {/* Section Header */}
+              <div
+                className="mb-8 text-center opacity-0 animate-fade-in-up delay-100 md:mb-10"
+                style={{ animationFillMode: "forwards" }}
+              >
+                <h2
+                  className="text-2xl font-bold tracking-tight md:text-3xl"
+                  style={{ color: "var(--mevi-text-primary)" }}
+                >
+                  Hệ sinh thái MEVI
+                </h2>
+                <p
+                  className="mt-2 text-sm md:text-base"
+                  style={{ color: "var(--mevi-text-secondary)" }}
+                >
+                  Chuỗi giá trị nông nghiệp khép kín — từ kiến thức đến thị
+                  trường
+                </p>
+              </div>
 
-          {/* Connection Flow Visualization */}
-          <div
-            className="mb-10 hidden w-full max-w-3xl items-center justify-center opacity-0 animate-fade-in-up delay-200 md:flex"
-            style={{ animationFillMode: "forwards" }}
-          >
-            <div className="flex items-center justify-center w-full">
-              {modules.map((mod, i) => {
-                const Icon = mod.icon;
-                return (
-                  <div key={mod.id} className="flex items-center">
+              {/* Connection Flow Visualization */}
+              <div
+                className="mb-10 hidden w-full max-w-3xl items-center justify-center opacity-0 animate-fade-in-up delay-200 md:flex"
+                style={{ animationFillMode: "forwards" }}
+              >
+                <div className="flex items-center justify-center w-full">
+                  {modules.map((mod, i) => {
+                    const Icon = mod.icon;
+                    return (
+                      <div key={mod.id} className="flex items-center">
+                        <a
+                          href={mod.href}
+                          onClick={handleModuleClick(mod)}
+                          className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <div
+                            className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
+                            style={{ width: 48, height: 48, borderRadius: 14 }}
+                          >
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span
+                            className="text-xs font-semibold"
+                            style={{ color: "var(--mevi-text-secondary)" }}
+                          >
+                            {mod.name.replace("Mevi ", "")}
+                          </span>
+                        </a>
+                        {i < modules.length - 1 && (
+                          <div
+                            className="w-16 mx-3 flex items-center justify-center"
+                            style={{ marginTop: "-20px" }}
+                          >
+                            <div
+                              className="h-0.5 w-full rounded-full animate-grow-line"
+                              style={{
+                                background:
+                                  "linear-gradient(90deg, var(--mevi-green-200), var(--mevi-green-300), var(--mevi-green-200))",
+                                animationDelay: `${0.4 + i * 0.2}s`,
+                                animationFillMode: "forwards",
+                                opacity: 0.7,
+                              }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Module Cards Grid */}
+              <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+                {modules.map((mod, i) => {
+                  const Icon = mod.icon;
+                  const isActive = mod.status === "Hoạt động";
+                  return (
                     <a
+                      key={mod.id}
                       href={mod.href}
                       onClick={handleModuleClick(mod)}
-                      className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
-                      style={{ textDecoration: "none" }}
-                    >
-                      <div
-                        className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
-                        style={{ width: 48, height: 48, borderRadius: 14 }}
-                      >
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <span
-                        className="text-xs font-semibold"
-                        style={{ color: "var(--mevi-text-secondary)" }}
-                      >
-                        {mod.name.replace("Mevi ", "")}
-                      </span>
-                    </a>
-                    {i < modules.length - 1 && (
-                      <div
-                        className="w-16 mx-3 flex items-center justify-center"
-                        style={{ marginTop: "-20px" }}
-                      >
-                        <div
-                          className="h-0.5 w-full rounded-full animate-grow-line"
-                          style={{
-                            background:
-                              "linear-gradient(90deg, var(--mevi-green-200), var(--mevi-green-300), var(--mevi-green-200))",
-                            animationDelay: `${0.4 + i * 0.2}s`,
-                            animationFillMode: "forwards",
-                            opacity: 0.7,
-                          }}
-                        ></div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Module Cards Grid */}
-          <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
-            {modules.map((mod, i) => {
-              const Icon = mod.icon;
-              const isActive = mod.status === "Hoạt động";
-              return (
-                <a
-                  key={mod.id}
-                  href={mod.href}
-                  onClick={handleModuleClick(mod)}
-                  className={`mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`}
-                  style={{
-                    animationDelay: `${0.3 + i * 0.1}s`,
-                    animationFillMode: "forwards",
-                    textDecoration: "none",
-                  }}
-                >
-                  {/* Card Header */}
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className={`mevi-module-icon ${mod.variant}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <span
-                      className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-right"
+                      className={`mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`}
                       style={{
-                        background: isActive
-                          ? "rgba(16, 185, 129, 0.1)"
-                          : "rgba(156, 163, 175, 0.1)",
-                        color: isActive
-                          ? "var(--mevi-green-700)"
-                          : "var(--mevi-text-muted)",
-                        border: isActive
-                          ? "1px solid rgba(16, 185, 129, 0.2)"
-                          : "1px solid rgba(156, 163, 175, 0.2)",
+                        animationDelay: `${0.3 + i * 0.1}s`,
+                        animationFillMode: "forwards",
+                        textDecoration: "none",
                       }}
                     >
-                      {mod.status}
-                    </span>
-                  </div>
+                      {/* Card Header */}
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className={`mevi-module-icon ${mod.variant}`}>
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <span
+                          className="rounded-full px-2.5 py-1 text-[10px] font-semibold text-right"
+                          style={{
+                            background: isActive
+                              ? "rgba(16, 185, 129, 0.1)"
+                              : "rgba(156, 163, 175, 0.1)",
+                            color: isActive
+                              ? "var(--mevi-green-700)"
+                              : "var(--mevi-text-muted)",
+                            border: isActive
+                              ? "1px solid rgba(16, 185, 129, 0.2)"
+                              : "1px solid rgba(156, 163, 175, 0.2)",
+                          }}
+                        >
+                          {mod.status}
+                        </span>
+                      </div>
 
-                  {/* Card Body */}
-                  <h4
-                    className="text-base font-bold mb-1.5"
-                    style={{ color: "var(--mevi-text-primary)" }}
-                  >
-                    {mod.name}
-                  </h4>
-                  <p
-                    className="text-sm leading-relaxed mb-4"
-                    style={{ color: "var(--mevi-text-secondary)" }}
-                  >
-                    {mod.description}
-                  </p>
-                  <p
-                    className="text-xs leading-relaxed mb-5"
-                    style={{ color: "var(--mevi-text-muted)" }}
-                  >
-                    {mod.longDesc}
-                  </p>
+                      {/* Card Body */}
+                      <h4
+                        className="text-base font-bold mb-1.5"
+                        style={{ color: "var(--mevi-text-primary)" }}
+                      >
+                        {mod.name}
+                      </h4>
+                      <p
+                        className="text-sm leading-relaxed mb-4"
+                        style={{ color: "var(--mevi-text-secondary)" }}
+                      >
+                        {mod.description}
+                      </p>
+                      <p
+                        className="text-xs leading-relaxed mb-5"
+                        style={{ color: "var(--mevi-text-muted)" }}
+                      >
+                        {mod.longDesc}
+                      </p>
 
-                  {/* Card Footer */}
-                  <div
-                    className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
-                    style={{ color: "var(--mevi-green-600)" }}
-                  >
-                    <span>Truy cập</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-                  </div>
-                </a>
-              );
-            })}
-          </div>
+                      {/* Card Footer */}
+                      <div
+                        className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
+                        style={{ color: "var(--mevi-green-600)" }}
+                      >
+                        <span>Truy cập</span>
+                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             </>
           )}
         </main>

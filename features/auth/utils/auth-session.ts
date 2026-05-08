@@ -9,7 +9,6 @@ export const AUTH_SESSION_KEYS = [
   "mevi_sso_provider",
   "mevi_user_identifier",
   "mevi_user_lookup_type",
-  "mevi_user_email",
   "mevi_user_name",
   "mevi_session_id",
   "mevi_company_id",
