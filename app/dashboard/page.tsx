@@ -29,10 +29,7 @@ import {
   getStoredAccessToken,
   getStoredUserName,
 } from "@/features/auth/utils";
-import {
-  DEFAULT_SURVEY_LOOKUP_VALUE,
-  SURVEY_META,
-} from "@/features/survey/constants/survey.constants";
+import { SURVEY_META } from "@/features/survey/constants/survey.constants";
 import { useSurveyDetailMutation } from "@/features/survey/hooks";
 import type {
   SurveyLookupType,
@@ -291,15 +288,11 @@ export default function DashboardPage() {
       if (token) {
         await logoutMutation.mutateAsync(token);
       }
-
+    } catch {
+      // Local logout should still complete even when the remote logout fails.
+    } finally {
       clearStoredAuthSession();
       router.replace("/");
-    } catch (error) {
-      setToastMessage(
-        error instanceof Error
-          ? error.message
-          : "Không thể đăng xuất. Vui lòng thử lại.",
-      );
     }
   };
 
