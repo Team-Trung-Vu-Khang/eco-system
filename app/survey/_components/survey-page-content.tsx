@@ -73,6 +73,7 @@ export function SurveyPageContent() {
     useState<SurveyRequestType | null>(
       initialSurveyType === "general" ? null : initialSurveyType,
     );
+  const startsFromBranchSurvey = initialSurveyType !== "general";
   const [surveyLookup] = useState(() => {
     const phoneParam = searchParams.get("phone")?.trim();
     const emailParam = searchParams.get("email")?.trim();
@@ -134,15 +135,20 @@ export function SurveyPageContent() {
   });
 
   const selectedSurveyKeys = useMemo<SurveyRequestType[]>(
-    () => [
-      "general",
-      ...(selectedBranchSurveyType
-        ? selectedBranchSurveyType === "general"
-          ? []
-          : [selectedBranchSurveyType]
-        : []),
-    ],
-    [selectedBranchSurveyType],
+    () => {
+      if (startsFromBranchSurvey) {
+        return [initialSurveyType];
+      }
+
+      return [
+        "general",
+        ...(selectedBranchSurveyType &&
+        selectedBranchSurveyType !== "general"
+          ? [selectedBranchSurveyType]
+          : []),
+      ];
+    },
+    [initialSurveyType, selectedBranchSurveyType, startsFromBranchSurvey],
   );
   const logoutMutation = useLogoutMutation();
   const isLoggingOut = logoutMutation.isPending;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Sparkles, X } from "lucide-react";
+import { ArrowRight, X } from "lucide-react";
 
 type SurveyBranchConfirmModalProps = {
   surveyName: string;
