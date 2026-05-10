@@ -20,11 +20,9 @@ import {
   SURVEY_META,
 } from "@/features/survey/constants/survey.constants";
 import {
-  getBranchSurveyType,
   getInitialSurveyType,
   getMatrixParts,
   getStoredLookupType,
-  isBranchQuestion,
   isMatrixAnswerValue,
 } from "@/features/survey/utils/survey-flow";
 import { optionIsSelected } from "@/features/survey/utils/survey-option";
@@ -69,11 +67,6 @@ export function SurveyPageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [completionTarget, setCompletionTarget] = useState<string | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
-  const [selectedBranchSurveyType, setSelectedBranchSurveyType] =
-    useState<SurveyRequestType | null>(
-      initialSurveyType === "general" ? null : initialSurveyType,
-    );
-  const startsFromBranchSurvey = initialSurveyType !== "general";
   const [surveyLookup] = useState(() => {
     const phoneParam = searchParams.get("phone")?.trim();
     const emailParam = searchParams.get("email")?.trim();
@@ -135,20 +128,8 @@ export function SurveyPageContent() {
   });
 
   const selectedSurveyKeys = useMemo<SurveyRequestType[]>(
-    () => {
-      if (startsFromBranchSurvey) {
-        return [initialSurveyType];
-      }
-
-      return [
-        "general",
-        ...(selectedBranchSurveyType &&
-        selectedBranchSurveyType !== "general"
-          ? [selectedBranchSurveyType]
-          : []),
-      ];
-    },
-    [initialSurveyType, selectedBranchSurveyType, startsFromBranchSurvey],
+    () => [initialSurveyType],
+    [initialSurveyType],
   );
   const logoutMutation = useLogoutMutation();
   const isLoggingOut = logoutMutation.isPending;
@@ -160,6 +141,8 @@ export function SurveyPageContent() {
         surveyKey,
         surveyLookup.type,
         surveyLookup.value,
+        surveyLookup.companyId,
+        surveyLookup.userId,
       ],
       queryFn: () =>
         fetchSurveyDetail(surveyKey, surveyLookup.value, surveyLookup.type, {
@@ -192,15 +175,6 @@ export function SurveyPageContent() {
   const surveyLoadFeedback =
     surveyLoadError instanceof Error ? surveyLoadError.message : null;
   const visibleFeedback = submitFeedback ?? surveyLoadFeedback;
-  const hasSubmittedSurvey = selectedSurveyKeys.some((surveyKey) => {
-    const surveyDetail = apiSurveyDetails[surveyKey];
-
-    return Boolean(
-      surveyDetail &&
-      (surveyDetail.status === "submitted" || surveyDetail.submittedAt),
-    );
-  });
-
   const apiQuestions: SurveyQuestionWithMeta[] = selectedSurveyKeys.flatMap(
     (surveyKey) => {
       const surveyDetail = apiSurveyDetails[surveyKey];
@@ -223,21 +197,10 @@ export function SurveyPageContent() {
     Math.max(wizardQuestions.length - 1, 0),
   );
   const currentQuestion = wizardQuestions[effectiveIndex];
-  const currentSurvey = SURVEY_META[currentQuestion?.surveyKey ?? "general"];
+  const currentSurvey =
+    SURVEY_META[currentQuestion?.surveyKey ?? initialSurveyType];
   const SurveyIcon = currentSurvey.icon;
   const portalTitle = currentSurvey.name;
-
-  useEffect(() => {
-    if (isLoadingSurveys || !hasSubmittedSurvey) return;
-
-    router.replace("/dashboard");
-  }, [hasSubmittedSurvey, isLoadingSurveys, router]);
-
-  useEffect(() => {
-    if (isLoadingSurveys || !surveyLoadError) return;
-
-    router.replace("/dashboard");
-  }, [isLoadingSurveys, router, surveyLoadError]);
 
   useEffect(() => {
     if (!showSuccessModal || !completionTarget) return;
@@ -270,12 +233,6 @@ export function SurveyPageContent() {
     : 0;
 
   const updateAnswer = (questionId: number, value: SurveyAnswerValue) => {
-    const question = wizardQuestions.find((item) => item.id === questionId);
-
-    if (isBranchQuestion(question)) {
-      setSelectedBranchSurveyType(getBranchSurveyType(question, value));
-    }
-
     setAnswersByQuestion((current) => ({
       ...current,
       [questionId]: value,
@@ -477,10 +434,6 @@ export function SurveyPageContent() {
   const isLastQuestion = effectiveIndex === wizardQuestions.length - 1;
   const nextDisabled = submitMutation.isPending || isLoadingSurveys;
 
-  if (hasSubmittedSurvey || surveyLoadError) {
-    return null;
-  }
-
   return (
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
       <DecorativeLeaves />
@@ -618,12 +571,20 @@ export function SurveyPageContent() {
             {!wizardQuestions.length && (
               <section className="rounded-[28px] bg-white/75 p-6 shadow-[0_18px_50px_-34px_rgba(6,78,59,0.18)]">
                 <div className="flex items-center gap-3">
-                  <Loader2
-                    className="h-5 w-5 animate-spin"
-                    style={{ color: "var(--mevi-green-700)" }}
-                  />
-                  <p style={{ color: "var(--mevi-text-secondary)" }}>
-                    Đang tải câu hỏi khảo sát...
+                  {!surveyLoadError && (
+                    <Loader2
+                      className="h-5 w-5 animate-spin"
+                      style={{ color: "var(--mevi-green-700)" }}
+                    />
+                  )}
+                  <p
+                    style={{
+                      color: surveyLoadError
+                        ? "#b91c1c"
+                        : "var(--mevi-text-secondary)",
+                    }}
+                  >
+                    {visibleFeedback ?? "Đang tải câu hỏi khảo sát..."}
                   </p>
                 </div>
               </section>
