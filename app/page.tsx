@@ -263,7 +263,8 @@ export default function LoginPage() {
                   animationFillMode: "forwards",
                 }}
               >
-                Nền tảng quản lý{" "}
+                Nền tảng quản lý
+                <br />
                 <span
                   className="bg-clip-text text-transparent"
                   style={{
