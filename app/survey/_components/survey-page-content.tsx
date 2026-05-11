@@ -20,9 +20,11 @@ import {
   SURVEY_META,
 } from "@/features/survey/constants/survey.constants";
 import {
+  getBranchSurveyTypes,
   getInitialSurveyType,
   getMatrixParts,
   getStoredLookupType,
+  isBranchQuestion,
   isMatrixAnswerValue,
 } from "@/features/survey/utils/survey-flow";
 import { optionIsSelected } from "@/features/survey/utils/survey-option";
@@ -49,6 +51,15 @@ type SurveyQuestionWithMeta = SurveyQuestion & {
   originalQuestionId?: number;
 };
 
+type BranchSurveyType = Exclude<SurveyRequestType, "general">;
+
+function getSurveyAnswerKey(
+  surveyKey: SurveyRequestType,
+  questionId: number,
+) {
+  return `${surveyKey}:${questionId}`;
+}
+
 export function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -62,8 +73,11 @@ export function SurveyPageContent() {
     "next" | "back"
   >("next");
   const [answersByQuestion, setAnswersByQuestion] = useState<
-    Record<number, SurveyAnswerValue>
+    Record<string, SurveyAnswerValue>
   >({});
+  const [selectedBranchSurveyKeys, setSelectedBranchSurveyKeys] = useState<
+    BranchSurveyType[]
+  >([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [completionTarget, setCompletionTarget] = useState<string | null>(null);
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
@@ -127,10 +141,11 @@ export function SurveyPageContent() {
     };
   });
 
-  const selectedSurveyKeys = useMemo<SurveyRequestType[]>(
-    () => [initialSurveyType],
-    [initialSurveyType],
-  );
+  const selectedSurveyKeys = useMemo<SurveyRequestType[]>(() => {
+    if (initialSurveyType !== "general") return [initialSurveyType];
+
+    return ["general", ...selectedBranchSurveyKeys];
+  }, [initialSurveyType, selectedBranchSurveyKeys]);
   const logoutMutation = useLogoutMutation();
   const isLoggingOut = logoutMutation.isPending;
 
@@ -218,8 +233,15 @@ export function SurveyPageContent() {
   }, [completionTarget, router, showSuccessModal]);
 
   const currentAnswers = answersByQuestion;
-  const getAnswerValue = (question: SurveyQuestion) => {
-    return currentAnswers[question.id] ?? getDefaultAnswer(question);
+  const getQuestionAnswerKey = (question: SurveyQuestionWithMeta) =>
+    getSurveyAnswerKey(
+      question.surveyKey ?? initialSurveyType,
+      question.originalQuestionId ?? question.id,
+    );
+  const getAnswerValue = (question: SurveyQuestionWithMeta) => {
+    return (
+      currentAnswers[getQuestionAnswerKey(question)] ?? getDefaultAnswer(question)
+    );
   };
 
   const answeredCount = wizardQuestions.filter((question) =>
@@ -232,19 +254,36 @@ export function SurveyPageContent() {
       : Math.round((effectiveIndex / (wizardQuestions.length - 1)) * 100)
     : 0;
 
-  const updateAnswer = (questionId: number, value: SurveyAnswerValue) => {
+  const updateAnswer = (
+    question: SurveyQuestionWithMeta,
+    value: SurveyAnswerValue,
+  ) => {
+    const answerKey = getQuestionAnswerKey(question);
+
     setAnswersByQuestion((current) => ({
       ...current,
-      [questionId]: value,
+      [answerKey]: value,
     }));
+
+    if (initialSurveyType === "general" && isBranchQuestion(question)) {
+      setSelectedBranchSurveyKeys(
+        getBranchSurveyTypes(question, value).filter(
+          (surveyKey): surveyKey is BranchSurveyType =>
+            surveyKey !== "general",
+        ),
+      );
+    }
   };
 
-  const toggleMultiChoice = (questionId: number, optionId: number) => {
-    const currentValue = currentAnswers[questionId];
+  const toggleMultiChoice = (
+    question: SurveyQuestionWithMeta,
+    optionId: number,
+  ) => {
+    const currentValue = getAnswerValue(question);
     const currentList = Array.isArray(currentValue) ? currentValue : [];
 
     updateAnswer(
-      questionId,
+      question,
       currentList.includes(optionId)
         ? currentList.filter((item) => item !== optionId)
         : [...currentList, optionId],
@@ -252,18 +291,18 @@ export function SurveyPageContent() {
   };
 
   const updateMatrixChoice = (
-    questionId: number,
+    question: SurveyQuestionWithMeta,
     rowId: number,
     columnId: number,
     allowMultiple: boolean,
   ) => {
-    const currentValue = currentAnswers[questionId];
+    const currentValue = getAnswerValue(question);
     const matrixValue = isMatrixAnswerValue(currentValue) ? currentValue : {};
     const rowKey = String(rowId);
     const currentRowValue = matrixValue[rowKey];
 
     if (!allowMultiple) {
-      updateAnswer(questionId, {
+      updateAnswer(question, {
         ...matrixValue,
         [rowKey]: columnId,
       });
@@ -271,7 +310,7 @@ export function SurveyPageContent() {
     }
 
     const currentList = Array.isArray(currentRowValue) ? currentRowValue : [];
-    updateAnswer(questionId, {
+    updateAnswer(question, {
       ...matrixValue,
       [rowKey]: currentList.includes(columnId)
         ? currentList.filter((item) => item !== columnId)
@@ -287,9 +326,21 @@ export function SurveyPageContent() {
 
           if (!surveyDetail) return null;
 
+          const surveyAnswers = surveyDetail.resultQuestions.reduce<
+            Record<number, SurveyAnswerValue>
+          >((answers, question) => {
+            const answer =
+              answersByQuestion[getSurveyAnswerKey(surveyKey, question.id)];
+
+            if (answer !== undefined) {
+              answers[question.id] = answer;
+            }
+
+            return answers;
+          }, {});
           const dataSubmit = buildSubmitPayload(
             surveyDetail.resultQuestions,
-            answersByQuestion,
+            surveyAnswers,
           );
 
           if (!dataSubmit.length) return null;
@@ -593,7 +644,7 @@ export function SurveyPageContent() {
             {wizardQuestions.length > 0 && currentQuestion && (
               <section className="space-y-4">
                 <article
-                  key={currentQuestion.id}
+                  key={getQuestionAnswerKey(currentQuestion)}
                   className={`rounded-[32px] bg-white/88 p-5 shadow-[0_24px_60px_-40px_rgba(6,78,59,0.2)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_32px_72px_-38px_rgba(6,78,59,0.28)] sm:p-6 ${currentQuestionClass}`}
                   style={{
                     background:
@@ -691,21 +742,21 @@ export function SurveyPageContent() {
                     {currentQuestion.type === "essay" && (
                       <>
                         <label
-                          htmlFor={`question-${currentQuestion.id}`}
+                          htmlFor={`question-${getQuestionAnswerKey(currentQuestion)}`}
                           className="block text-sm font-medium"
                           style={{ color: "var(--mevi-text-secondary)" }}
                         >
                           Câu trả lời
                         </label>
                         <textarea
-                          id={`question-${currentQuestion.id}`}
+                          id={`question-${getQuestionAnswerKey(currentQuestion)}`}
                           value={
                             typeof getAnswerValue(currentQuestion) === "string"
                               ? (getAnswerValue(currentQuestion) as string)
                               : ""
                           }
                           onChange={(event) =>
-                            updateAnswer(currentQuestion.id, event.target.value)
+                            updateAnswer(currentQuestion, event.target.value)
                           }
                           placeholder="Bà con nhập câu trả lời tại đây..."
                           className="min-h-36 w-full resize-y rounded-[24px] px-4 py-4 text-sm outline-none transition-all"
@@ -731,7 +782,7 @@ export function SurveyPageContent() {
                               key={option.id}
                               type="button"
                               onClick={() =>
-                                updateAnswer(currentQuestion.id, option.id)
+                                updateAnswer(currentQuestion, option.id)
                               }
                               className="group w-full rounded-[24px] border border-transparent p-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                               style={{
@@ -815,7 +866,7 @@ export function SurveyPageContent() {
                               key={option.id}
                               type="button"
                               onClick={() =>
-                                toggleMultiChoice(currentQuestion.id, option.id)
+                                toggleMultiChoice(currentQuestion, option.id)
                               }
                               className="group w-full rounded-[24px] border border-transparent p-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                               style={{
@@ -909,7 +960,7 @@ export function SurveyPageContent() {
                                 key={option.id}
                                 type="button"
                                 onClick={() =>
-                                  updateAnswer(currentQuestion.id, option.id)
+                                  updateAnswer(currentQuestion, option.id)
                                 }
                                 className="flex min-w-12 flex-col items-center gap-2 rounded-[16px] px-3 py-2 transition-all duration-200 hover:-translate-y-0.5"
                                 style={{
@@ -969,7 +1020,7 @@ export function SurveyPageContent() {
                                 key={option.id}
                                 type="button"
                                 onClick={() =>
-                                  updateAnswer(currentQuestion.id, option.id)
+                                  updateAnswer(currentQuestion, option.id)
                                 }
                                 className="group w-full rounded-[24px] border border-transparent px-4 py-4 text-left transition-all duration-300 transform-gpu hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_22px_38px_-24px_rgba(6,78,59,0.28)]"
                                 style={{
@@ -1043,7 +1094,7 @@ export function SurveyPageContent() {
                               type="button"
                               onClick={() =>
                                 updateAnswer(
-                                  currentQuestion.id,
+                                  currentQuestion,
                                   option.id === 1,
                                 )
                               }
@@ -1191,7 +1242,7 @@ export function SurveyPageContent() {
                                             type="button"
                                             onClick={() =>
                                               updateMatrixChoice(
-                                                currentQuestion.id,
+                                                currentQuestion,
                                                 row.id,
                                                 column.id,
                                                 allowMultiple,

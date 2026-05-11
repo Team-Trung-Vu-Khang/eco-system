@@ -3,28 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
-    "start": "next start -p 3100",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@Team-Trung-Vu-Khang/eco-shared-ui": "^0.0.5-beta.4",
     "@tanstack/react-query": "^5.100.5",
-    "@Team-Trung-Vu-Khang/eco-shared-ui": "^0.0.4-beta.3",
     "lucide-react": "^1.8.0",
     "next": "16.1.1",
+    "postcss": "^8.5.14",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.74.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.3.0",
     "typescript": "^5"
   }
 }

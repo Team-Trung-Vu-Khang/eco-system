@@ -26,20 +26,35 @@ export function getBranchSurveyType(
   question: SurveyQuestion | undefined,
   value: SurveyAnswerValue,
 ): SurveyRequestType | null {
-  if (!question || !isBranchQuestion(question) || typeof value !== "number") {
-    return null;
-  }
+  return getBranchSurveyTypes(question, value)[0] ?? null;
+}
 
-  const selectedOption = question.options?.find(
-    (option) => option.id === value,
+export function getBranchSurveyTypes(
+  question: SurveyQuestion | undefined,
+  value: SurveyAnswerValue,
+): SurveyRequestType[] {
+  if (!question || !isBranchQuestion(question)) return [];
+
+  const selectedOptionIds =
+    typeof value === "number" ? [value] : Array.isArray(value) ? value : [];
+  const selectedSurveyTypes = new Set<SurveyRequestType>();
+
+  selectedOptionIds.forEach((optionId) => {
+    const selectedOption = question.options?.find(
+      (option) => option.id === optionId,
+    );
+    const selectedLabel = selectedOption?.label.toLocaleUpperCase("vi") ?? "";
+
+    if (selectedLabel.includes("MEVI FARM")) selectedSurveyTypes.add("farm");
+    if (selectedLabel.includes("MEVI FACTORY")) {
+      selectedSurveyTypes.add("factory");
+    }
+    if (selectedLabel.includes("MEVI SHOP")) selectedSurveyTypes.add("shop");
+  });
+
+  return (["farm", "factory", "shop"] as const).filter((surveyType) =>
+    selectedSurveyTypes.has(surveyType),
   );
-  const selectedLabel = selectedOption?.label.toLocaleUpperCase("vi") ?? "";
-
-  if (selectedLabel.includes("MEVI FARM")) return "farm";
-  if (selectedLabel.includes("MEVI FACTORY")) return "factory";
-  if (selectedLabel.includes("MEVI SHOP")) return "shop";
-
-  return null;
 }
 
 export function getStoredLookupType(value: string): SurveyLookupType {
