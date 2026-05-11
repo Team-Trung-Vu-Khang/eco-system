@@ -61,7 +61,7 @@ const modules = [
       "Quản lý vùng trồng, mùa vụ, kế hoạch canh tác, vật tư nông nghiệp, nhân sự và toàn bộ hoạt động nông trại.",
     icon: Sprout,
     variant: "farm" as const,
-    href: "/farm",
+    href: "https://eco-farm-app-demo.vercel.app/",
     status: "Hoạt động",
     dotColor: "bg-green-400",
   },
@@ -102,8 +102,8 @@ type ChangePasswordFormValues = {
 function hasPendingSurvey(surveyDetail: SurveyResultDetails | null) {
   return Boolean(
     surveyDetail &&
-      surveyDetail.status !== "submitted" &&
-      !surveyDetail.submittedAt,
+    surveyDetail.status !== "submitted" &&
+    !surveyDetail.submittedAt,
   );
 }
 
