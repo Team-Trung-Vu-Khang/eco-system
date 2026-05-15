@@ -243,11 +243,10 @@ export default function DashboardPage() {
     setLoadingModuleId(mod.id);
 
     const targetHref = mod.href;
-    window.setTimeout(() => {
+    // Let React paint loading state before leaving the current page.
+    window.requestAnimationFrame(() => {
       window.location.assign(targetHref);
-
-      setLoadingModuleId(null);
-    }, 2000);
+    });
   };
 
   const getSurveyLookup = () => {
