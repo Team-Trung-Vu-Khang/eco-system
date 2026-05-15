@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const SSO_API_BASE =
   process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ??
@@ -213,6 +213,18 @@ function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
 
 export default function LoginPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    const handlePageShow = () => {
+      setIsLoggingIn(false);
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
