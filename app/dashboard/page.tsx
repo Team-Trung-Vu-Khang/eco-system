@@ -230,6 +230,21 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
 
+  useEffect(() => {
+    const clearModuleLoading = () => {
+      setLoadingModuleId(null);
+    };
+
+    // Clear stale loading state when page is restored after cross-app navigation.
+    window.addEventListener("pageshow", clearModuleLoading);
+    window.addEventListener("focus", clearModuleLoading);
+
+    return () => {
+      window.removeEventListener("pageshow", clearModuleLoading);
+      window.removeEventListener("focus", clearModuleLoading);
+    };
+  }, []);
+
   const openModule = (mod: ModuleItem) => {
     if (mod.id === "factory" || mod.id === "shop") {
       setLoadingModuleId(null);
