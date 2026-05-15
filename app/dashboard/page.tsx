@@ -243,8 +243,24 @@ export default function DashboardPage() {
     setLoadingModuleId(mod.id);
 
     const targetHref = mod.href;
+    const openedTab = window.open("about:blank", "_blank");
+
+    if (!openedTab) {
+      const anchor = document.createElement("a");
+      anchor.href = targetHref;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.click();
+
+      window.setTimeout(() => {
+        setLoadingModuleId(null);
+      }, 2000);
+      return;
+    }
+
+    openedTab.opener = null;
     window.setTimeout(() => {
-      window.open(targetHref, "_blank", "noopener,noreferrer");
+      openedTab.location.assign(targetHref);
 
       setLoadingModuleId(null);
     }, 2000);
