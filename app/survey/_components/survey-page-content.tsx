@@ -60,6 +60,14 @@ function getSurveyAnswerKey(
   return `${surveyKey}:${questionId}`;
 }
 
+function hasPendingSurvey(surveyDetail?: SurveyResultDetails | null) {
+  return Boolean(
+    surveyDetail &&
+      surveyDetail.status !== "submitted" &&
+      !surveyDetail.submittedAt,
+  );
+}
+
 export function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,11 +198,19 @@ export function SurveyPageContent() {
   const surveyLoadFeedback =
     surveyLoadError instanceof Error ? surveyLoadError.message : null;
   const visibleFeedback = submitFeedback ?? surveyLoadFeedback;
+  const hasSkippedCompletedSurvey = selectedSurveyKeys.some((surveyKey) => {
+    const surveyDetail = apiSurveyDetails[surveyKey];
+
+    return Boolean(surveyDetail && !hasPendingSurvey(surveyDetail));
+  });
+  const hasLoadedSurveyDetail = selectedSurveyKeys.some(
+    (surveyKey) => apiSurveyDetails[surveyKey],
+  );
   const apiQuestions: SurveyQuestionWithMeta[] = selectedSurveyKeys.flatMap(
     (surveyKey) => {
       const surveyDetail = apiSurveyDetails[surveyKey];
 
-      if (!surveyDetail) return [];
+      if (!hasPendingSurvey(surveyDetail)) return [];
 
       return surveyDetail.resultQuestions.map((question) => ({
         ...question,
@@ -216,6 +232,12 @@ export function SurveyPageContent() {
     SURVEY_META[currentQuestion?.surveyKey ?? initialSurveyType];
   const SurveyIcon = currentSurvey.icon;
   const portalTitle = currentSurvey.name;
+  const shouldSkipCompletedSurvey =
+    !isLoadingSurveys &&
+    !surveyLoadError &&
+    !wizardQuestions.length &&
+    hasLoadedSurveyDetail &&
+    hasSkippedCompletedSurvey;
 
   useEffect(() => {
     if (!showSuccessModal || !completionTarget) return;
@@ -231,6 +253,21 @@ export function SurveyPageContent() {
 
     return () => window.clearTimeout(timer);
   }, [completionTarget, router, showSuccessModal]);
+
+  useEffect(() => {
+    if (!shouldSkipCompletedSurvey || showSuccessModal) return;
+
+    const timer = window.setTimeout(() => {
+      if (returnTo.startsWith("http")) {
+        window.location.assign(returnTo);
+        return;
+      }
+
+      router.replace(returnTo);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [returnTo, router, shouldSkipCompletedSurvey, showSuccessModal]);
 
   const currentAnswers = answersByQuestion;
   const getQuestionAnswerKey = (question: SurveyQuestionWithMeta) =>
@@ -324,7 +361,7 @@ export function SurveyPageContent() {
         .map((surveyKey) => {
           const surveyDetail = apiSurveyDetails[surveyKey];
 
-          if (!surveyDetail) return null;
+          if (!hasPendingSurvey(surveyDetail)) return null;
 
           const surveyAnswers = surveyDetail.resultQuestions.reduce<
             Record<number, SurveyAnswerValue>
@@ -635,7 +672,10 @@ export function SurveyPageContent() {
                         : "var(--mevi-text-secondary)",
                     }}
                   >
-                    {visibleFeedback ?? "Đang tải câu hỏi khảo sát..."}
+                    {visibleFeedback ??
+                      (shouldSkipCompletedSurvey
+                        ? "Khảo sát đã hoàn tất, đang chuyển tiếp..."
+                        : "Đang tải câu hỏi khảo sát...")}
                   </p>
                 </div>
               </section>

@@ -28,7 +28,13 @@ export function buildAuthMeUrl() {
 }
 
 export function buildLogoutUrl() {
-  return new URL("/auth/logout", AUTH_API_BASE).toString();
+  const logoutUrl = new URL("/auth/logout", AUTH_API_BASE);
+  logoutUrl.searchParams.set(
+    "post_logout_redirect_uri",
+    "https://mevi-center.otechz.com/",
+  );
+
+  return logoutUrl.toString();
 }
 
 export function buildRefreshUrl() {
