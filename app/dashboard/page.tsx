@@ -245,6 +245,19 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleBackNavigation = () => {
+      window.location.replace("/");
+    };
+
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handleBackNavigation);
+
+    return () => {
+      window.removeEventListener("popstate", handleBackNavigation);
+    };
+  }, []);
+
   const openModule = (mod: ModuleItem) => {
     if (mod.id === "factory" || mod.id === "shop") {
       setLoadingModuleId(null);
