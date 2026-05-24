@@ -205,6 +205,8 @@ body {
 /* ===== Mevi Portal Styles ===== */
 
 .mevi-portal {
+  min-height: 100vh;
+  min-height: 100svh;
   height: 100dvh;
   background: linear-gradient(160deg, var(--mevi-cream) 0%, var(--mevi-green-50) 30%, var(--mevi-paper) 60%, var(--mevi-earth-50) 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

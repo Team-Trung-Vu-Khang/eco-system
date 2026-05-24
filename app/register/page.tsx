@@ -150,7 +150,7 @@ export default function RegistrationPage() {
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
       <DecorativeLeaves />
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-28 sm:pb-32">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-[calc(13rem+env(safe-area-inset-bottom))] sm:pb-32">
         <MeviPortalHeader
           badgeLabel="Đăng ký"
           className="px-4 py-4 sm:px-6 md:px-10"
@@ -274,9 +274,9 @@ export default function RegistrationPage() {
 
             <form
               onSubmit={onSubmit}
-              className="flex min-h-0 flex-1 flex-col gap-2.5"
+              className="flex flex-col gap-2.5"
             >
-              <div className="grid min-h-0 flex-1 gap-2.5 pr-1">
+              <div className="grid gap-2.5 pr-1">
                 <div className="space-y-1">
                   <label
                     htmlFor="fullName"

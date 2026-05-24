@@ -569,7 +569,7 @@ export function SurveyPageContent() {
                     <button
                       type="button"
                       onClick={handleBackToStart}
-                      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium no-underline transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/80 hover:shadow-md"
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs sm:text-sm font-medium no-underline transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/80 hover:shadow-md"
                       style={{
                         color: "var(--mevi-text-secondary)",
                         background: "rgba(255,255,255,0.58)",
@@ -594,13 +594,13 @@ export function SurveyPageContent() {
 
                     <div>
                       <h2
-                        className="max-w-2xl text-3xl font-extrabold tracking-tight sm:text-4xl"
+                        className="max-w-2xl text-2xl sm:text-3xl font-extrabold tracking-tight md:text-4xl"
                         style={{ color: "var(--mevi-text-primary)" }}
                       >
                         {currentSurvey.name}
                       </h2>
                       <p
-                        className="mt-2 max-w-2xl text-sm leading-6 sm:text-base"
+                        className="mt-2 max-w-2xl text-xs sm:text-sm leading-6 sm:text-base"
                         style={{ color: "var(--mevi-text-secondary)" }}
                       >
                         {currentSurvey.description}
@@ -622,7 +622,7 @@ export function SurveyPageContent() {
                     </div>
                     <div>
                       <p
-                        className="text-sm font-semibold"
+                        className="text-xs sm:text-sm font-semibold"
                         style={{ color: "var(--mevi-text-primary)" }}
                       >
                         Câu {currentQuestionNumber} /{" "}
@@ -754,7 +754,7 @@ export function SurveyPageContent() {
                   <div className="mt-4">
                     {currentQuestion.contentRich ? (
                       <div
-                        className="text-[1.75rem] font-bold leading-[1.25] sm:text-[2rem]"
+                        className="text-[1.5rem] sm:text-[1.75rem] font-bold leading-[1.25] md:text-[2rem]"
                         style={{ color: "var(--mevi-text-primary)" }}
                         dangerouslySetInnerHTML={{
                           __html: currentQuestion.contentRich,
@@ -762,7 +762,7 @@ export function SurveyPageContent() {
                       />
                     ) : (
                       <h3
-                        className="text-[1.75rem] font-bold leading-[1.25] sm:text-[2rem]"
+                        className="text-[1.5rem] sm:text-[1.75rem] font-bold leading-[1.25] md:text-[2rem]"
                         style={{ color: "var(--mevi-text-primary)" }}
                       >
                         {currentQuestion.content}
@@ -770,7 +770,7 @@ export function SurveyPageContent() {
                     )}
                     {currentQuestion.helperText && (
                       <p
-                        className="mt-2 max-w-2xl text-sm leading-6"
+                        className="mt-2 max-w-2xl text-xs sm:text-sm leading-6"
                         style={{ color: "var(--mevi-text-muted)" }}
                       >
                         {currentQuestion.helperText}
@@ -783,7 +783,7 @@ export function SurveyPageContent() {
                       <>
                         <label
                           htmlFor={`question-${getQuestionAnswerKey(currentQuestion)}`}
-                          className="block text-sm font-medium"
+                          className="block text-xs sm:text-sm font-medium"
                           style={{ color: "var(--mevi-text-secondary)" }}
                         >
                           Câu trả lời
@@ -799,7 +799,7 @@ export function SurveyPageContent() {
                             updateAnswer(currentQuestion, event.target.value)
                           }
                           placeholder="Bà con nhập câu trả lời tại đây..."
-                          className="min-h-36 w-full resize-y rounded-[24px] px-4 py-4 text-sm outline-none transition-all"
+                          className="min-h-36 w-full resize-y rounded-[24px] px-4 py-4 text-xs sm:text-sm outline-none transition-all"
                           style={{
                             color: "var(--mevi-text-primary)",
                             background: "rgba(255,255,255,0.92)",
@@ -839,7 +839,7 @@ export function SurveyPageContent() {
                             >
                               <div className="flex items-center gap-4">
                                 <div
-                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs sm:text-sm font-bold"
                                   style={{
                                     background: checked
                                       ? currentSurvey.accent
@@ -853,7 +853,7 @@ export function SurveyPageContent() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p
-                                    className="text-[15px] font-semibold leading-6"
+                                    className="text-sm sm:text-[15px] font-semibold leading-6"
                                     style={{
                                       color: "var(--mevi-text-primary)",
                                     }}
@@ -862,7 +862,7 @@ export function SurveyPageContent() {
                                   </p>
                                   {option.description && (
                                     <p
-                                      className="mt-1 text-sm leading-6"
+                                      className="mt-1 text-xs sm:text-sm leading-6"
                                       style={{
                                         color: "var(--mevi-text-muted)",
                                       }}
@@ -923,7 +923,7 @@ export function SurveyPageContent() {
                             >
                               <div className="flex items-center gap-4">
                                 <div
-                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs sm:text-sm font-bold"
                                   style={{
                                     background: checked
                                       ? currentSurvey.accent
@@ -937,7 +937,7 @@ export function SurveyPageContent() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p
-                                    className="text-[15px] font-semibold leading-6"
+                                    className="text-sm sm:text-[15px] font-semibold leading-6"
                                     style={{
                                       color: "var(--mevi-text-primary)",
                                     }}
@@ -946,7 +946,7 @@ export function SurveyPageContent() {
                                   </p>
                                   {option.description && (
                                     <p
-                                      className="mt-1 text-sm leading-6"
+                                      className="mt-1 text-xs sm:text-sm leading-6"
                                       style={{
                                         color: "var(--mevi-text-muted)",
                                       }}
@@ -982,7 +982,7 @@ export function SurveyPageContent() {
                         <div className="flex min-w-max flex-wrap items-center justify-between gap-8 rounded-[24px] bg-white/90 px-4 py-5">
                           {currentQuestion.ratingMinLabel && (
                             <span
-                              className="max-w-36 text-sm font-medium"
+                              className="max-w-36 text-xs sm:text-sm font-medium"
                               style={{ color: "var(--mevi-text-primary)" }}
                             >
                               {currentQuestion.ratingMinLabel}
@@ -1012,7 +1012,7 @@ export function SurveyPageContent() {
                                     : "transparent",
                                 }}
                               >
-                                <span className="text-sm font-semibold">
+                                <span className="text-xs sm:text-sm font-semibold">
                                   {option.label}
                                 </span>
                                 <span
@@ -1036,7 +1036,7 @@ export function SurveyPageContent() {
 
                           {currentQuestion.ratingMaxLabel && (
                             <span
-                              className="max-w-36 text-right text-sm font-medium"
+                              className="max-w-36 text-right text-xs sm:text-sm font-medium"
                               style={{ color: "var(--mevi-text-primary)" }}
                             >
                               {currentQuestion.ratingMaxLabel}
@@ -1080,7 +1080,7 @@ export function SurveyPageContent() {
                               >
                                 <div className="flex items-center gap-4">
                                   <div
-                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs sm:text-sm font-bold"
                                     style={{
                                       background: checked
                                         ? "rgba(255,255,255,0.18)"
@@ -1093,7 +1093,7 @@ export function SurveyPageContent() {
                                     {index + 1}
                                   </div>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-[15px] font-semibold leading-6">
+                                    <p className="text-sm sm:text-[15px] font-semibold leading-6">
                                       {option.label}
                                     </p>
                                   </div>
@@ -1153,7 +1153,7 @@ export function SurveyPageContent() {
                             >
                               <div className="flex items-center gap-4">
                                 <div
-                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs sm:text-sm font-bold"
                                   style={{
                                     background: checked
                                       ? currentSurvey.accent
@@ -1180,7 +1180,7 @@ export function SurveyPageContent() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p
-                                    className="text-[15px] font-semibold leading-6"
+                                    className="text-sm sm:text-[15px] font-semibold leading-6"
                                     style={{
                                       color: checked
                                         ? "white"
@@ -1221,7 +1221,7 @@ export function SurveyPageContent() {
                                       <th />
                                       <th colSpan={columns.length}>
                                         <div
-                                          className="flex items-center justify-between px-3 pb-2 text-sm font-medium"
+                                          className="flex items-center justify-between px-3 pb-2 text-xs sm:text-sm font-medium"
                                           style={{
                                             color: "var(--mevi-text-primary)",
                                           }}
@@ -1241,7 +1241,7 @@ export function SurveyPageContent() {
                                   {columns.map((column) => (
                                     <th
                                       key={column.id}
-                                      className="min-w-28 px-3 py-2 text-center text-sm font-semibold"
+                                      className="min-w-28 px-3 py-2 text-center text-xs sm:text-sm font-semibold"
                                       style={{
                                         color: "var(--mevi-text-primary)",
                                       }}
@@ -1255,7 +1255,7 @@ export function SurveyPageContent() {
                                 {rows.map((row) => (
                                   <tr key={row.id}>
                                     <td
-                                      className="min-w-40 rounded-l-[16px] bg-[rgba(236,253,245,0.45)] px-3 py-3 text-sm font-medium"
+                                      className="min-w-40 rounded-l-[16px] bg-[rgba(236,253,245,0.45)] px-3 py-3 text-xs sm:text-sm font-medium"
                                       style={{
                                         color: "var(--mevi-text-primary)",
                                       }}
@@ -1322,7 +1322,7 @@ export function SurveyPageContent() {
 
                   {visibleFeedback && (
                     <div
-                      className="mt-5 rounded-[22px] border border-[rgba(254,202,202,0.9)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm"
+                      className="mt-5 rounded-[22px] border border-[rgba(254,202,202,0.9)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-xs sm:text-sm"
                       style={{ color: "#b91c1c" }}
                     >
                       {visibleFeedback}
@@ -1333,7 +1333,7 @@ export function SurveyPageContent() {
                 <div className="flex flex-col gap-4 rounded-[28px] border border-transparent bg-white/78 p-5 shadow-[0_18px_50px_-34px_rgba(6,78,59,0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(16,185,129,0.22)] hover:shadow-[0_26px_60px_-30px_rgba(6,78,59,0.24)] sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p
-                      className="text-sm font-semibold"
+                      className="text-xs sm:text-sm font-semibold"
                       style={{ color: "var(--mevi-text-primary)" }}
                     >
                       {isLastQuestion
@@ -1341,7 +1341,7 @@ export function SurveyPageContent() {
                         : "Chọn xong rồi bấm tiếp tục"}
                     </p>
                     <p
-                      className="mt-1 text-sm"
+                      className="mt-1 text-xs sm:text-sm"
                       style={{ color: "var(--mevi-text-secondary)" }}
                     >
                       {isLastQuestion
@@ -1354,7 +1354,7 @@ export function SurveyPageContent() {
                     <button
                       type="button"
                       onClick={goBack}
-                      className="rounded-[12px] px-5 py-3 text-sm font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md"
+                      className="rounded-[12px] px-5 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-md"
                       style={{
                         color: "var(--mevi-text-secondary)",
                         background: "rgba(255,255,255,0.6)",
