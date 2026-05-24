@@ -436,7 +436,7 @@ function AuthCallbackShell({
           rightSlot={
             <>
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Nền tảng bảo mật</span>
+              <span className="hidden md:block">Nền tảng bảo mật</span>
             </>
           }
           rightSlotClassName="mevi-badge hidden sm:flex"
