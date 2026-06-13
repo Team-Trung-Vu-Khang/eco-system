@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "../components/providers";
+import { StudentSupportWidget } from "../components/student-support-widget";
 
 export const metadata: Metadata = {
   title: "MEVI — Hệ sinh thái Nông nghiệp thông minh",
@@ -42,6 +43,7 @@ export default function RootLayout({
         }}
       >
         <Providers>{children}</Providers>
+        <StudentSupportWidget />
       </body>
     </html>
   );
