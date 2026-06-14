@@ -4,12 +4,12 @@ import { GraduationCap, PhoneCall, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-const SUPPORT_HOTLINE = "08.1221.3836";
-const SUPPORT_HOTLINE_TEL = "tel:+84812213836";
-const SUPPORT_ZALO_URL =
-  process.env.NEXT_PUBLIC_MEVI_SUPPORT_ZALO_URL ?? "";
-const SUPPORT_FACEBOOK_URL =
-  process.env.NEXT_PUBLIC_MEVI_SUPPORT_FACEBOOK_URL ?? "";
+const SUPPORT_TITLE = "Thông tin hỗ trợ App";
+const SUPPORT_SUBTITLE = "Vui lòng liên hệ với chúng tôi khi cần hỗ trợ";
+const SUPPORT_HOTLINE = "0369855018";
+const SUPPORT_HOTLINE_TEL = "tel:+84369855018";
+const SUPPORT_ZALO_URL = "https://zalo.me/g/ivxolkmmyzn8eys4dho3";
+const SUPPORT_FACEBOOK_URL = "https://www.facebook.com/share/g/18pWjQmVrF/";
 const SUPPORT_ZALO_LOGO =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png";
 const SUPPORT_FACEBOOK_LOGO =
@@ -95,7 +95,7 @@ export function StudentSupportWidget() {
       {isOpen ? (
         <button
           type="button"
-          aria-label="Đóng hỗ trợ học viên"
+          aria-label="Đóng thông tin hỗ trợ App"
           className="fixed inset-0 z-[129] cursor-default bg-transparent"
           onClick={() => setIsOpen(false)}
         />
@@ -112,17 +112,17 @@ export function StudentSupportWidget() {
         <div className="mb-2 flex items-start justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-[var(--mevi-text-primary)]">
-              Hỗ trợ học viên
+              {SUPPORT_TITLE}
             </p>
             <p className="mt-0.5 text-xs leading-5 text-[var(--mevi-text-muted)]">
-              Bấm vào kênh phù hợp để được hỗ trợ nhanh.
+              {SUPPORT_SUBTITLE}
             </p>
           </div>
           <button
             type="button"
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mevi-border)] text-[var(--mevi-text-muted)] transition hover:bg-[var(--mevi-green-50)] hover:text-[var(--mevi-green-700)]"
             onClick={() => setIsOpen(false)}
-            aria-label="Đóng khung hỗ trợ"
+            aria-label="Đóng thông tin hỗ trợ App"
           >
             <X className="h-4 w-4" />
           </button>
@@ -219,7 +219,7 @@ export function StudentSupportWidget() {
           });
         }}
         className="group relative z-[131] inline-flex h-14 w-14 items-center justify-center rounded-full border border-[rgba(212,229,216,0.8)] bg-white shadow-[0_16px_34px_-18px_rgba(6,78,59,0.4)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_38px_-16px_rgba(6,78,59,0.45)]"
-        aria-label="Mở hỗ trợ học viên"
+        aria-label="Mở thông tin hỗ trợ App"
         aria-expanded={isOpen}
         aria-controls="student-support-panel"
       >

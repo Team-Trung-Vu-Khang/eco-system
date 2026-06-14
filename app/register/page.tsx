@@ -202,6 +202,10 @@ export default function RegistrationPage() {
               </p>
               <div className="mt-2.5 space-y-2 text-[13px] leading-5 text-emerald-900 sm:mt-3 sm:space-y-2.5 sm:text-base sm:leading-6">
                 <p>
+                  <span className="font-semibold">Họ và tên:</span>{" "}
+                  {submittedData.fullName}
+                </p>
+                <p>
                   <span className="font-semibold">SĐT:</span>{" "}
                   {submittedData.phoneNumber}
                 </p>
