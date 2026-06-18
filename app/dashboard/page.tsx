@@ -43,7 +43,7 @@ import { getStoredLookupType } from "@/features/survey/utils/survey-flow";
 const modules = [
   {
     id: "edu",
-    name: "Mevi Edu",
+    name: "Trung tập học tập MEVI",
     description: "Đào tạo & hướng dẫn kỹ thuật nông nghiệp",
     longDesc:
       "Hệ thống giáo dục trực tuyến, tài liệu kỹ thuật canh tác, hướng dẫn sử dụng phân bón và quy trình sản xuất.",
@@ -55,7 +55,7 @@ const modules = [
   },
   {
     id: "farm",
-    name: "Mevi Farm",
+    name: "Trang trại MEVI",
     description: "Quản lý nông trại & canh tác thông minh",
     longDesc:
       "Quản lý vùng trồng, mùa vụ, kế hoạch canh tác, vật tư nông nghiệp, nhân sự và toàn bộ hoạt động nông trại.",
@@ -67,10 +67,10 @@ const modules = [
   },
   {
     id: "factory",
-    name: "Mevi Factory",
+    name: "Mạng lưới nhà máy/cơ sở chế biến MEVI",
     description: "Quản lý nhà máy & chế biến nông sản",
     longDesc:
-      "Theo dõi quy trình sản xuất, quản lý nguyên liệu đầu vào, kiểm soát chất lượng và xuất kho thành phẩm.",
+      "Nền tảng online để tổng hợp thông tin Nhà máy/cơ sở chế biến trong mạng lưới MEVI và kết nối nhu cầu gia công các cơ sở đang cần với cơ sở sản xuất dư thừa công suất.",
     icon: Factory,
     variant: "factory" as const,
     href: "/factory",
@@ -79,7 +79,7 @@ const modules = [
   },
   {
     id: "shop",
-    name: "Mevi Shop",
+    name: "Trạm xanh MEVI",
     description: "Cửa hàng & phân phối sản phẩm",
     longDesc:
       "Kênh bán hàng trực tuyến, quản lý đơn hàng, chăm sóc khách hàng và truy xuất nguồn gốc sản phẩm.",
@@ -875,7 +875,7 @@ export default function DashboardPage() {
                         className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
                         style={{ color: "var(--mevi-green-600)" }}
                       >
-                        <span>Truy cập</span>
+                        <span>Đăng nhập</span>
                         <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                       </div>
                     </a>

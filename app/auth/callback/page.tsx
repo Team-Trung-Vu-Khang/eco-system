@@ -140,7 +140,7 @@ function AuthCallbackContent() {
   const isChangingPassword = changePasswordMutation.isPending;
   const error =
     callbackError ??
-    (token ? null : "Không nhận được token SSO. Vui lòng thử truy cập lại.");
+    (token ? null : "Không nhận được token SSO. Vui lòng thử đăng nhập lại.");
 
   const checkSurveyAndRedirect = useCallback(
     async (phone: string, canRedirect: () => boolean = () => true) => {

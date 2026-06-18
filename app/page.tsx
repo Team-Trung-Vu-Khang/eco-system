@@ -180,11 +180,11 @@ function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
             {isLoggingIn ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Đang truy cập...
+                Đang đăng nhập...
               </>
             ) : (
               <>
-                Truy cập
+                Đăng nhập
                 <ArrowRight className="h-[18px] w-[18px]" />
               </>
             )}

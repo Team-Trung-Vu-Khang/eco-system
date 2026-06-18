@@ -6,7 +6,7 @@ import { StudentSupportWidget } from "../components/student-support-widget";
 export const metadata: Metadata = {
   title: "MEVI — Hệ sinh thái Nông nghiệp thông minh",
   description:
-    "Nền tảng quản lý nông nghiệp toàn diện: Đào tạo (Edu), Nông trại (Farm), Nhà máy (Factory), Cửa hàng (Shop). Một tài khoản — truy cập toàn hệ thống.",
+    "Nền tảng quản lý nông nghiệp toàn diện: Đào tạo (Edu), Nông trại (Farm), Nhà máy (Factory), Cửa hàng (Shop). Một tài khoản — đăng nhập toàn hệ thống.",
   keywords: [
     "MEVI",
     "nông nghiệp thông minh",

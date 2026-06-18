@@ -40,7 +40,7 @@ export function SurveyBranchConfirmModal({
                   <span className="font-semibold text-slate-700">
                     {surveyName}
                   </span>{" "}
-                  trước khi truy cập phân hệ này.
+                  trước khi đăng nhập phân hệ này.
                 </p>
               </div>
             </div>

@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -93,6 +94,7 @@ function FieldError({ message }: { message?: string }) {
 }
 
 export default function RegistrationPage() {
+  const router = useRouter();
   const [submittedData, setSubmittedData] =
     useState<RegistrationProfileRequest | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -126,6 +128,11 @@ export default function RegistrationPage() {
       ? submittedData.audienceTypeOther
       : getAudienceTypeLabel(submittedData.audienceType)
     : "";
+  const handleCloseSuccessModal = () => {
+    setIsSuccessModalOpen(false);
+    setSubmittedData(null);
+    router.replace("/");
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     const payload: RegistrationProfileRequest = {
@@ -187,7 +194,7 @@ export default function RegistrationPage() {
 
             <button
               type="button"
-              onClick={() => setIsSuccessModalOpen(false)}
+              onClick={handleCloseSuccessModal}
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-900 sm:h-9 sm:w-9"
               aria-label="Đóng thông báo"
             >
