@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
@@ -44,6 +45,7 @@ function formatPhoneDisplay(value: string) {
 }
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [isRequestingOtp, setIsRequestingOtp] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [otpRequested, setOtpRequested] = useState(false);
@@ -87,7 +89,7 @@ export default function ForgotPasswordPage() {
     if (feedback?.kind !== "success") return;
 
     redirectTimerRef.current = window.setTimeout(() => {
-      window.location.assign("/");
+      router.replace("/");
     }, 1800);
 
     return () => {
@@ -95,7 +97,7 @@ export default function ForgotPasswordPage() {
         window.clearTimeout(redirectTimerRef.current);
       }
     };
-  }, [feedback]);
+  }, [feedback, router]);
 
   const currentPhone = normalizePhoneInput(phoneValue);
 
@@ -237,7 +239,7 @@ export default function ForgotPasswordPage() {
 
   const handleCloseModal = () => {
     if (feedback?.kind === "success") {
-      window.location.assign("/");
+      router.replace("/");
       return;
     }
 
