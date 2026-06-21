@@ -18,6 +18,23 @@ export type ChangePasswordPayload = {
   confirmPassword: string;
 };
 
+export type ForgotPasswordRequestOtpPayload = {
+  phoneNumber: string;
+};
+
+export type ForgotPasswordRequestOtpResponse = {
+  requestId?: string | null;
+  message?: string | null;
+  messageKey?: string | null;
+};
+
+export type ForgotPasswordResetPayload = {
+  requestId: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 export type LogoutMeviSessionResponse = {
   message?: string | null;
   logoutUrl?: string | null;
@@ -43,6 +60,14 @@ export function buildRefreshUrl() {
 
 export function buildChangePasswordUrl() {
   return new URL("/auth/change-password", AUTH_API_BASE).toString();
+}
+
+export function buildForgotPasswordRequestOtpUrl() {
+  return new URL("/auth/password-reset/otp", AUTH_API_BASE).toString();
+}
+
+export function buildForgotPasswordResetUrl() {
+  return new URL("/auth/password-reset/confirm", AUTH_API_BASE).toString();
 }
 
 function normalizeObjectKeys<T>(input: T): T {
@@ -89,45 +114,19 @@ function getStringClaim(
   return null;
 }
 
-function getBooleanClaim(
-  payload: Record<string, unknown> | null,
-  keys: string[],
-) {
-  if (!payload) return null;
-
-  for (const key of keys) {
-    const value = payload[key];
-
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      const normalizedValue = value.trim().toLowerCase();
-
-      if (normalizedValue === "true" || normalizedValue === "1") {
-        return true;
-      }
-
-      if (normalizedValue === "false" || normalizedValue === "0") {
-        return false;
-      }
-    }
-
-    if (typeof value === "number") {
-      return value === 1;
-    }
-  }
-
-  return null;
-}
-
 function getApiErrorMessage(payload: unknown) {
   const normalizedPayload = normalizeObjectKeys(payload);
   const record = toRecord(normalizedPayload);
   const message = getStringClaim(record, ["message", "error"]);
 
   return message;
+}
+
+function getRequestIdFromPayload(payload: unknown) {
+  const normalizedPayload = normalizeObjectKeys(payload);
+  const record = toRecord(normalizedPayload);
+
+  return getStringClaim(record, ["requestId", "request_id", "id"]);
 }
 
 function getAccessTokenFromPayload(payload: unknown): string | null {
@@ -262,4 +261,69 @@ export async function changeCurrentUserPassword({
 
     throw new Error(message || "Không thể đổi mật khẩu. Vui lòng thử lại.");
   }
+}
+
+export async function requestForgotPasswordOtp(
+  payload: ForgotPasswordRequestOtpPayload,
+): Promise<ForgotPasswordRequestOtpResponse> {
+  const response = await fetch(buildForgotPasswordRequestOtpUrl(), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      identifier: payload.phoneNumber,
+    }),
+    cache: "no-store",
+  });
+
+  const responsePayload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = getApiErrorMessage(responsePayload);
+
+    throw new Error(message || "Không thể gửi OTP. Vui lòng thử lại.");
+  }
+
+  return {
+    requestId: getRequestIdFromPayload(responsePayload),
+    message:
+      typeof responsePayload?.message === "string"
+        ? responsePayload.message
+        : null,
+    messageKey:
+      typeof responsePayload?.messageKey === "string"
+        ? responsePayload.messageKey
+        : null,
+  };
+}
+
+export async function resetForgotPassword(
+  payload: ForgotPasswordResetPayload,
+) {
+  const response = await fetch(buildForgotPasswordResetUrl(), {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      requestId: payload.requestId,
+      otp: payload.otp,
+      newPassword: payload.newPassword,
+      confirmPassword: payload.confirmPassword,
+    }),
+    cache: "no-store",
+  });
+
+  const responsePayload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = getApiErrorMessage(responsePayload);
+
+    throw new Error(message || "Không thể đặt lại mật khẩu. Vui lòng thử lại.");
+  }
+
+  return responsePayload;
 }

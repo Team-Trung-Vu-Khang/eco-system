@@ -7,6 +7,16 @@ interface ViteLoaderProps {
   basename?: string;
 }
 
+type RemoteContainer = {
+  init?: (options: { remotes: unknown[] }) => Promise<void> | void;
+  get: (request: string) => Promise<() => { mount?: MountFunction }>;
+};
+
+type MountFunction = (
+  target: HTMLDivElement,
+  options?: { basename?: string },
+) => (() => void) | void;
+
 export default function ViteLoader({
   remoteUrl,
   module,
@@ -24,8 +34,7 @@ export default function ViteLoader({
     const load = async () => {
       try {
         // 2. Load the Remote Module
-        /* @ts-ignore */
-        const container = await import(/* webpackIgnore: true */ remoteUrl);
+        const container = (await import(/* webpackIgnore: true */ remoteUrl)) as RemoteContainer;
         if (container.init) await container.init({ remotes: [] });
 
         const factory = await container.get(module);
@@ -43,10 +52,12 @@ export default function ViteLoader({
 
         // 4. Mount the app into our div
         console.log("[ViteLoader] Mounting...");
-        unmountFn = mount(targetDiv, { basename });
-      } catch (err: any) {
+        const cleanup = mount(targetDiv, { basename });
+        unmountFn = typeof cleanup === "function" ? cleanup : null;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[ViteLoader] Error:", err);
-        setErrorMsg(err.message);
+        setErrorMsg(message);
       }
     };
 

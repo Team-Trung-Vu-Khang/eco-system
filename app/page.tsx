@@ -195,6 +195,19 @@ function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
           className="text-center text-sm leading-6"
           style={{ color: "var(--mevi-text-secondary)" }}
         >
+          <Link
+            href="/forgot-password"
+            className="font-semibold underline-offset-2 hover:underline"
+            style={{ color: "var(--mevi-green-700)" }}
+          >
+            Quên mật khẩu?
+          </Link>
+        </p>
+
+        <p
+          className="text-center text-sm leading-6"
+          style={{ color: "var(--mevi-text-secondary)" }}
+        >
           Bạn đã có tài khoản chưa?{" "}
           <Link
             href="/register"
