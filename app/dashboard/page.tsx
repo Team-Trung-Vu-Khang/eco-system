@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
@@ -43,7 +43,7 @@ import { getStoredLookupType } from "@/features/survey/utils/survey-flow";
 const modules = [
   {
     id: "edu",
-    name: "Trung tập học tập MEVI",
+    name: "Trung tâm học tập MEVI",
     description: "Đào tạo & hướng dẫn kỹ thuật nông nghiệp",
     longDesc:
       "Hệ thống giáo dục trực tuyến, tài liệu kỹ thuật canh tác, hướng dẫn sử dụng phân bón và quy trình sản xuất.",
@@ -52,6 +52,7 @@ const modules = [
     href: "https://mevi-edu.otechz.com/",
     status: "Hoạt động",
     dotColor: "bg-blue-400",
+    isActive: true,
   },
   {
     id: "farm",
@@ -62,8 +63,9 @@ const modules = [
     icon: Sprout,
     variant: "farm" as const,
     href: "https://eco-farm-app-demo.vercel.app/",
-    status: "Hoạt động",
-    dotColor: "bg-green-400",
+    status: "Đang phát triển",
+    dotColor: "bg-orange-400",
+    isActive: false,
   },
   {
     id: "factory",
@@ -76,6 +78,7 @@ const modules = [
     href: "/factory",
     status: "Đang phát triển",
     dotColor: "bg-orange-400",
+    isActive: false,
   },
   {
     id: "shop",
@@ -88,6 +91,7 @@ const modules = [
     href: "/shop",
     status: "Đang phát triển",
     dotColor: "bg-purple-400",
+    isActive: false,
   },
 ] as const;
 
@@ -180,12 +184,13 @@ function DecorativeLeaves() {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [accessToken] = useState(() =>
-    typeof window === "undefined" ? null : getStoredAccessToken(),
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
   );
-  const [storedUserName] = useState(() =>
-    typeof window === "undefined" ? null : getStoredUserName(),
-  );
+  const accessToken = isHydrated ? getStoredAccessToken() : null;
+  const storedUserName = isHydrated ? getStoredUserName() : null;
   const authMeQuery = useAuthMeQuery(accessToken);
   const changePasswordMutation = useChangePasswordMutation();
   const logoutMutation = useLogoutMutation();
@@ -332,6 +337,8 @@ export default function DashboardPage() {
 
   const shouldCheckSurvey = (mod: ModuleItem): mod is BranchModule =>
     mod.id === "farm" || mod.id === "factory" || mod.id === "shop";
+
+  const isModuleActive = (mod: ModuleItem) => mod.isActive;
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -766,27 +773,56 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-center w-full">
                   {modules.map((mod, i) => {
                     const Icon = mod.icon;
+                    const active = isModuleActive(mod);
                     return (
                       <div key={mod.id} className="flex items-center">
-                        <a
-                          href={mod.href}
-                          onClick={handleModuleClick(mod)}
-                          className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
-                          style={{ textDecoration: "none" }}
-                        >
+                        {active ? (
+                          <a
+                            href={mod.href}
+                            onClick={handleModuleClick(mod)}
+                            className="flex flex-col items-center gap-2 flex-shrink-0 group no-underline transition-transform duration-200 hover:scale-110"
+                            style={{ textDecoration: "none" }}
+                          >
+                            <div
+                              className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 14,
+                              }}
+                            >
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <span
+                              className="text-xs font-semibold"
+                              style={{ color: "var(--mevi-text-secondary)" }}
+                            >
+                              {mod.name.replace("Mevi ", "")}
+                            </span>
+                          </a>
+                        ) : (
                           <div
-                            className={`mevi-module-icon ${mod.variant} shadow-sm group-hover:shadow-md transition-shadow duration-200`}
-                            style={{ width: 48, height: 48, borderRadius: 14 }}
+                            className="flex flex-col items-center gap-2 flex-shrink-0 cursor-default opacity-60"
+                            aria-disabled="true"
                           >
-                            <Icon className="w-5 h-5" />
+                            <div
+                              className={`mevi-module-icon ${mod.variant} shadow-sm transition-shadow duration-200`}
+                              style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 14,
+                              }}
+                            >
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <span
+                              className="text-xs font-semibold"
+                              style={{ color: "var(--mevi-text-secondary)" }}
+                            >
+                              {mod.name.replace("Mevi ", "")}
+                            </span>
                           </div>
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: "var(--mevi-text-secondary)" }}
-                          >
-                            {mod.name.replace("Mevi ", "")}
-                          </span>
-                        </a>
+                        )}
                         {i < modules.length - 1 && (
                           <div
                             className="w-16 mx-3 flex items-center justify-center"
@@ -814,19 +850,16 @@ export default function DashboardPage() {
               <div className="grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
                 {modules.map((mod, i) => {
                   const Icon = mod.icon;
-                  const isActive = mod.status === "Hoạt động";
-                  return (
-                    <a
-                      key={mod.id}
-                      href={mod.href}
-                      onClick={handleModuleClick(mod)}
-                      className={`mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`}
-                      style={{
-                        animationDelay: `${0.3 + i * 0.1}s`,
-                        animationFillMode: "forwards",
-                        textDecoration: "none",
-                      }}
-                    >
+                  const isActive = isModuleActive(mod);
+                  const cardClassName = `mevi-module-card ${mod.variant} opacity-0 animate-fade-in-up group`;
+                  const cardStyle = {
+                    animationDelay: `${0.3 + i * 0.1}s`,
+                    animationFillMode: "forwards" as const,
+                    textDecoration: "none",
+                  };
+
+                  const cardContent = (
+                    <>
                       {/* Card Header */}
                       <div className="mb-4 flex items-start justify-between gap-3">
                         <div className={`mevi-module-icon ${mod.variant}`}>
@@ -871,13 +904,42 @@ export default function DashboardPage() {
                       </p>
 
                       {/* Card Footer */}
+                      {isActive && (
+                        <div
+                          className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300"
+                          style={{
+                            color: "var(--mevi-green-600)",
+                          }}
+                        >
+                          <span>Đăng nhập</span>
+                          <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        </div>
+                      )}
+                    </>
+                  );
+
+                  if (!isActive) {
+                    return (
                       <div
-                        className="mt-auto flex items-center gap-1.5 text-sm font-semibold transition-all duration-300 group-hover:gap-3"
-                        style={{ color: "var(--mevi-green-600)" }}
+                        key={mod.id}
+                        className={`${cardClassName} cursor-default opacity-80`}
+                        style={cardStyle}
+                        aria-disabled="true"
                       >
-                        <span>Đăng nhập</span>
-                        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        {cardContent}
                       </div>
+                    );
+                  }
+
+                  return (
+                    <a
+                      key={mod.id}
+                      href={mod.href}
+                      onClick={handleModuleClick(mod)}
+                      className={cardClassName}
+                      style={cardStyle}
+                    >
+                      {cardContent}
                     </a>
                   );
                 })}
