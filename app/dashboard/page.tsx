@@ -62,10 +62,10 @@ const modules = [
       "Quản lý vùng trồng, mùa vụ, kế hoạch canh tác, vật tư nông nghiệp, nhân sự và toàn bộ hoạt động nông trại.",
     icon: Sprout,
     variant: "farm" as const,
-    href: "https://eco-farm-app-demo.vercel.app/",
+    href: "https://eco-farm-app-b2bj-git-develop-tankhang1s-projects.vercel.app/",
     status: "Đang phát triển",
     dotColor: "bg-orange-400",
-    isActive: false,
+    isActive: true,
   },
   {
     id: "factory",
