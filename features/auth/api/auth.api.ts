@@ -48,7 +48,7 @@ export function buildLogoutUrl() {
   const logoutUrl = new URL("/auth/logout", AUTH_API_BASE);
   logoutUrl.searchParams.set(
     "post_logout_redirect_uri",
-    "https://mevi-center.otechz.com/",
+    "https://eco-system-git-develop-tankhang1s-projects.vercel.app/",
   );
 
   return logoutUrl.toString();
@@ -299,9 +299,7 @@ export async function requestForgotPasswordOtp(
   };
 }
 
-export async function resetForgotPassword(
-  payload: ForgotPasswordResetPayload,
-) {
+export async function resetForgotPassword(payload: ForgotPasswordResetPayload) {
   const response = await fetch(buildForgotPasswordResetUrl(), {
     method: "POST",
     headers: {
