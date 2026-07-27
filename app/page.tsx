@@ -15,6 +15,8 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthSession } from "@/features/auth/state/auth-session-store";
 
 const SSO_API_BASE =
   process.env.NEXT_PUBLIC_MEVI_AUTH_API_BASE ??
@@ -225,6 +227,8 @@ function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
 /* ===== Login Page ===== */
 
 export default function LoginPage() {
+  const router = useRouter();
+  const authSession = useAuthSession();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
@@ -238,6 +242,12 @@ export default function LoginPage() {
       window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
+
+  useEffect(() => {
+    if (authSession.status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [authSession.status, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,74 +264,91 @@ export default function LoginPage() {
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
       <DecorativeLeaves />
 
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-28 sm:pb-32">
-        <MeviPortalHeader
-          badgeLabel="Đăng nhập"
-          className="opacity-0 animate-fade-in-up px-4 py-4 sm:px-6 md:px-10"
-          style={{ animationFillMode: "forwards" }}
-          rightSlot={
-            <>
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span className="hidden md:block">Nền tảng bảo mật</span>
-            </>
-          }
-          rightSlotClassName="mevi-badge hidden sm:flex"
-        />
+      {authSession.status === "loading" ? (
+        <div className="relative flex min-h-0 flex-1 items-center justify-center px-4">
+          <div className="mevi-login-card flex w-full max-w-sm flex-col items-center gap-3 rounded-[24px] p-6 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-green-700" />
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--mevi-text-primary)" }}
+            >
+              Đang khôi phục phiên đăng nhập...
+            </p>
+            <p className="text-sm" style={{ color: "var(--mevi-text-muted)" }}>
+              Nếu bạn đã đăng nhập trước đó, hệ thống sẽ tự vào thẳng trang chính.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-28 sm:pb-32">
+          <MeviPortalHeader
+            badgeLabel="Đăng nhập"
+            className="opacity-0 animate-fade-in-up px-4 py-4 sm:px-6 md:px-10"
+            style={{ animationFillMode: "forwards" }}
+            rightSlot={
+              <>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span className="hidden md:block">Nền tảng bảo mật</span>
+              </>
+            }
+            rightSlotClassName="mevi-badge hidden sm:flex"
+          />
 
-        <main className="relative z-10 flex w-full flex-1 items-center px-4 pb-6 pt-2 sm:px-6 sm:pt-4 md:px-10 md:pb-8 lg:px-14">
-          <section className="mx-auto grid w-full max-w-6xl items-center gap-5 sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] md:gap-10 lg:gap-14">
-            <div className="mx-auto w-full max-w-2xl text-center md:mx-0 md:text-left">
-              <div
-                className="opacity-0 animate-fade-in-up delay-100"
-                style={{ animationFillMode: "forwards" }}
-              >
-                <div className="mevi-ecosystem-badge mx-auto mb-3 text-xs md:mx-0">
-                  <Link2 className="h-3.5 w-3.5" />
-                  <span>Mevi Ecosystem</span>
+          <main className="relative z-10 flex w-full flex-1 items-center px-4 pb-6 pt-2 sm:px-6 sm:pt-4 md:px-10 md:pb-8 lg:px-14">
+            <section className="mx-auto grid w-full max-w-6xl items-center gap-5 sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] md:gap-10 lg:gap-14">
+              <div className="mx-auto w-full max-w-2xl text-center md:mx-0 md:text-left">
+                <div
+                  className="opacity-0 animate-fade-in-up delay-100"
+                  style={{ animationFillMode: "forwards" }}
+                >
+                  <div className="mevi-ecosystem-badge mx-auto mb-3 text-xs md:mx-0">
+                    <Link2 className="h-3.5 w-3.5" />
+                    <span>Mevi Ecosystem</span>
+                  </div>
                 </div>
-              </div>
 
-              <h1
-                className="text-balance text-3xl font-extrabold leading-tight tracking-normal opacity-0 animate-fade-in-up delay-200 sm:text-4xl lg:text-5xl"
-                style={{
-                  color: "var(--mevi-text-primary)",
-                  animationFillMode: "forwards",
-                }}
-              >
-                Nền tảng quản lý
-                <br />
-                <span
-                  className="bg-clip-text text-transparent"
+                <h1
+                  className="text-balance text-3xl font-extrabold leading-tight tracking-normal opacity-0 animate-fade-in-up delay-200 sm:text-4xl lg:text-5xl"
                   style={{
-                    backgroundImage:
-                      "linear-gradient(135deg, var(--mevi-green-600), var(--mevi-green-800))",
+                    color: "var(--mevi-text-primary)",
+                    animationFillMode: "forwards",
                   }}
                 >
-                  Nông nghiệp thông minh
-                </span>
-              </h1>
+                  Nền tảng quản lý
+                  <br />
+                  <span
+                    className="bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(135deg, var(--mevi-green-600), var(--mevi-green-800))",
+                    }}
+                  >
+                    Nông nghiệp thông minh
+                  </span>
+                </h1>
 
-              <p
-                className="mx-auto mt-3 max-w-xl text-sm leading-6 opacity-0 animate-fade-in-up delay-300 sm:text-base md:mx-0"
-                style={{
-                  color: "var(--mevi-text-secondary)",
-                  animationFillMode: "forwards",
-                }}
-              >
-                Một cổng đăng nhập cho toàn bộ hệ sinh thái MEVI, giúp kết nối
-                giáo dục, nông trại, nhà máy và cửa hàng trong cùng một luồng
-                làm việc.
-              </p>
+                <p
+                  className="mx-auto mt-3 max-w-xl text-sm leading-6 opacity-0 animate-fade-in-up delay-300 sm:text-base md:mx-0"
+                  style={{
+                    color: "var(--mevi-text-secondary)",
+                    animationFillMode: "forwards",
+                  }}
+                >
+                  Một cổng đăng nhập cho toàn bộ hệ sinh thái MEVI, giúp kết nối
+                  giáo dục, nông trại, nhà máy và cửa hàng trong cùng một luồng
+                  làm việc.
+                </p>
 
-              <EcosystemFlowMini className="mt-3 md:justify-start" />
-            </div>
+                <EcosystemFlowMini className="mt-3 md:justify-start" />
+              </div>
 
-            <div className="mx-auto w-full max-w-[24rem] md:mx-0 md:justify-self-end">
-              <LoginPanel isLoggingIn={isLoggingIn} onSubmit={handleLogin} />
-            </div>
-          </section>
-        </main>
-      </div>
+              <div className="mx-auto w-full max-w-[24rem] md:mx-0 md:justify-self-end">
+                <LoginPanel isLoggingIn={isLoggingIn} onSubmit={handleLogin} />
+              </div>
+            </section>
+          </main>
+        </div>
+      )}
 
       <MeviPortalFooter />
     </div>

@@ -40,6 +40,11 @@ export type LogoutMeviSessionResponse = {
   logoutUrl?: string | null;
 };
 
+export type BootAuthSessionResponse = {
+  accessToken: string;
+  profile: AuthMeProfile;
+};
+
 export function buildAuthMeUrl() {
   return new URL("/auth/me", AUTH_API_BASE).toString();
 }
@@ -235,6 +240,65 @@ export async function refreshAccessToken(token: string) {
   }
 
   return refreshedToken;
+}
+
+async function parseJsonResponse<T>(response: Response) {
+  const payload = (await response.json().catch(() => null)) as T | null;
+
+  return payload;
+}
+
+export async function bootstrapAuthSession(): Promise<BootAuthSessionResponse> {
+  const response = await fetch("/api/auth/bootstrap", {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+  const payload = await parseJsonResponse<BootAuthSessionResponse>(response);
+
+  if (!response.ok || !payload?.accessToken || !payload.profile) {
+    throw new Error("Không khôi phục được phiên đăng nhập.");
+  }
+
+  return payload;
+}
+
+export async function establishAuthSession(
+  token: string,
+): Promise<BootAuthSessionResponse> {
+  const response = await fetch("/api/auth/session", {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ token }),
+    cache: "no-store",
+  });
+  const payload = await parseJsonResponse<BootAuthSessionResponse>(response);
+
+  if (!response.ok || !payload?.accessToken || !payload.profile) {
+    const message =
+      (payload as { message?: string } | null)?.message ||
+      "Không tạo được phiên đăng nhập.";
+
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+export async function logoutBrowserSession() {
+  const response = await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Không thể đăng xuất phiên trình duyệt.");
+  }
 }
 
 export async function changeCurrentUserPassword({

@@ -20,18 +20,14 @@ import { useForm, useWatch } from "react-hook-form";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
 import { DecorativeLeaves } from "@/app/survey/_components/decorative-leaves";
-import type { AuthMeProfile } from "@/features/auth/api";
+import { establishAuthSession, logoutBrowserSession } from "@/features/auth/api";
+import { useChangePasswordMutation } from "@/features/auth/hooks";
 import {
-  useAuthMeMutation,
-  useChangePasswordMutation,
-  useLogoutMutation,
-} from "@/features/auth/hooks";
-import {
-  USER_PROFILE_STORAGE_KEY,
   clearStoredAuthSession,
-  getStoredAccessToken,
   setStoredAccessToken,
+  storeAuthenticatedProfile,
 } from "@/features/auth/utils";
+import { useAuthSession, setAuthSession } from "@/features/auth/state/auth-session-store";
 import {
   fetchSurveyDetail,
   type SurveyRequestContext,
@@ -43,31 +39,12 @@ type ChangePasswordFormValues = {
   confirmPassword: string;
 };
 
-function getProfilePhone(profile: AuthMeProfile) {
+function getProfilePhone(profile: {
+  phoneNumber?: string | null;
+  name?: string | null;
+  userId?: string | null;
+}) {
   return profile.phoneNumber?.trim() || "";
-}
-
-function storeAuthenticatedProfile(profile: AuthMeProfile) {
-  const name = profile.name || "";
-  const phone = getProfilePhone(profile);
-  const companyId = profile.companyId || "";
-  const userId = profile.userId || "";
-
-  window.sessionStorage.setItem(
-    USER_PROFILE_STORAGE_KEY,
-    JSON.stringify(profile),
-  );
-  window.sessionStorage.setItem("mevi_user_identifier", phone);
-  window.sessionStorage.setItem(
-    "mevi_user_name",
-    name || "Tài khoản quản trị MEVI",
-  );
-
-  if (companyId) {
-    window.sessionStorage.setItem("mevi_company_id", String(companyId));
-  }
-
-  if (userId) window.sessionStorage.setItem("mevi_user_id", userId);
 }
 
 function buildSurveyUrl(phone: string) {
@@ -110,13 +87,12 @@ function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
-  const { mutateAsync: getCurrentUser } = useAuthMeMutation();
   const changePasswordMutation = useChangePasswordMutation();
-  const { mutateAsync: logoutSession, isPending: isExiting } =
-    useLogoutMutation();
+  const authSession = useAuthSession();
   const isExitRequestedRef = useRef(false);
   const [callbackError, setCallbackError] = useState<string | null>(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState<string | null>(
     null,
   );
@@ -141,6 +117,7 @@ function AuthCallbackContent() {
   const error =
     callbackError ??
     (token ? null : "Không nhận được token SSO. Vui lòng thử đăng nhập lại.");
+  const accessToken = authSession.accessToken;
 
   const checkSurveyAndRedirect = useCallback(
     async (phone: string, canRedirect: () => boolean = () => true) => {
@@ -175,14 +152,19 @@ function AuthCallbackContent() {
     async function syncAuthenticatedUser() {
       try {
         clearStoredAuthSession();
-        setStoredAccessToken(token);
-
-        const profile = await getCurrentUser(token);
+        const session = await establishAuthSession(token);
+        const profile = session.profile;
         const phone = getProfilePhone(profile);
 
         if (!isActive || isExitRequestedRef.current) return;
 
+        setStoredAccessToken(session.accessToken);
         storeAuthenticatedProfile(profile);
+        setAuthSession({
+          accessToken: session.accessToken,
+          profile,
+          status: "authenticated",
+        });
 
         if (profile.mustChangePassword) {
           setMustChangePassword(true);
@@ -197,6 +179,7 @@ function AuthCallbackContent() {
         if (!isActive || isExitRequestedRef.current) return;
 
         clearStoredAuthSession();
+        await logoutBrowserSession().catch(() => null);
         setCallbackError(
           error instanceof Error
             ? error.message
@@ -210,7 +193,7 @@ function AuthCallbackContent() {
     return () => {
       isActive = false;
     };
-  }, [checkSurveyAndRedirect, getCurrentUser, token]);
+  }, [checkSurveyAndRedirect, token]);
 
   const onChangePasswordSubmit = handlePasswordSubmit(async (values) => {
     setPasswordChangeError(null);
@@ -222,17 +205,14 @@ function AuthCallbackContent() {
 
     try {
       await changePasswordMutation.mutateAsync({
-        token,
+        token: accessToken || token,
         payload: {
           newPassword: values.newPassword,
           confirmPassword: values.confirmPassword,
         },
       });
 
-      const refreshedProfile = await getCurrentUser(token);
-      const phone = getProfilePhone(refreshedProfile);
-
-      storeAuthenticatedProfile(refreshedProfile);
+      const phone = getProfilePhone(authSession.profile ?? {});
       resetPasswordForm();
       setMustChangePassword(false);
 
@@ -251,28 +231,17 @@ function AuthCallbackContent() {
 
     isExitRequestedRef.current = true;
     setCallbackError(null);
-
-    const storedToken = getStoredAccessToken();
-    const logoutToken = token || storedToken;
-    let didLogoutRemote = false;
-    let logoutUrl: string | null | undefined;
+    setIsExiting(true);
 
     try {
-      if (logoutToken) {
-        const logoutResult = await logoutSession(logoutToken);
-        didLogoutRemote = true;
-        logoutUrl = logoutResult.logoutUrl;
+      if (accessToken || token) {
+        await logoutBrowserSession();
       }
     } catch {
       // Local exit should still complete even when the remote logout fails.
     } finally {
       clearStoredAuthSession();
-
-      if (didLogoutRemote && logoutUrl) {
-        window.location.href = logoutUrl;
-        return;
-      }
-
+      setIsExiting(false);
       router.replace("/");
     }
   };
