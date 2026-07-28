@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "../components/providers";
 import { StudentSupportWidget } from "../components/student-support-widget";
+import { SerwistProvider } from "@serwist/turbopack/react";
 
 export const metadata: Metadata = {
-  title: "MEVI — Hệ sinh thái Nông nghiệp thông minh",
+  title: {
+    default: "MEVI — Hệ sinh thái Nông nghiệp thông minh",
+    template: "%s | MEVI",
+  },
   description:
     "Nền tảng quản lý nông nghiệp toàn diện: Đào tạo (Edu), Nông trại (Farm), Nhà máy (Factory), Cửa hàng (Shop). Một tài khoản — đăng nhập toàn hệ thống.",
+  applicationName: "MEVI",
   keywords: [
     "MEVI",
     "nông nghiệp thông minh",
@@ -15,6 +20,15 @@ export const metadata: Metadata = {
     "eco farm",
     "truy xuất nguồn gốc",
   ],
+  appleWebApp: {
+    capable: true,
+    title: "MEVI",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -42,8 +56,10 @@ export default function RootLayout({
             "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         }}
       >
-        <Providers>{children}</Providers>
-        <StudentSupportWidget />
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <Providers>{children}</Providers>
+          <StudentSupportWidget />
+        </SerwistProvider>
       </body>
     </html>
   );
