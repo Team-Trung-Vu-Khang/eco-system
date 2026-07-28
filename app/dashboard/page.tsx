@@ -13,11 +13,12 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
+import { useAuthSession } from "@/features/auth/state/auth-session-store";
 import {
   useAuthMeQuery,
   useChangePasswordMutation,
@@ -26,8 +27,7 @@ import {
 import {
   USER_PROFILE_STORAGE_KEY,
   clearStoredAuthSession,
-  getStoredAccessToken,
-  getStoredUserName,
+  storeAuthenticatedProfile,
 } from "@/features/auth/utils";
 import { SURVEY_META } from "@/features/survey/constants/survey.constants";
 import { useSurveyDetailMutation } from "@/features/survey/hooks";
@@ -184,14 +184,11 @@ function DecorativeLeaves() {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const isHydrated = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
+  const authSession = useAuthSession();
+  const accessToken = authSession.accessToken;
+  const authMeQuery = useAuthMeQuery(
+    authSession.status === "authenticated" ? accessToken : null,
   );
-  const accessToken = isHydrated ? getStoredAccessToken() : null;
-  const storedUserName = isHydrated ? getStoredUserName() : null;
-  const authMeQuery = useAuthMeQuery(accessToken);
   const changePasswordMutation = useChangePasswordMutation();
   const logoutMutation = useLogoutMutation();
   const surveyDetailMutation = useSurveyDetailMutation();
@@ -204,8 +201,9 @@ export default function DashboardPage() {
     useState<BranchModule | null>(null);
   const isLoggingOut = logoutMutation.isPending;
   const isChangingPassword = changePasswordMutation.isPending;
-  const mustChangePassword = Boolean(authMeQuery.data?.mustChangePassword);
-  const displayName = getDisplayName(authMeQuery.data ?? {}, storedUserName);
+  const profile = authMeQuery.data ?? authSession.profile;
+  const mustChangePassword = Boolean(profile?.mustChangePassword);
+  const displayName = getDisplayName(profile ?? {});
   const userInitials = getUserInitials(displayName);
   const {
     register: registerPasswordField,
@@ -224,6 +222,18 @@ export default function DashboardPage() {
       control: passwordFormControl,
       name: "newPassword",
     }) ?? "";
+
+  useEffect(() => {
+    if (authMeQuery.data) {
+      storeAuthenticatedProfile(authMeQuery.data);
+    }
+  }, [authMeQuery.data]);
+
+  useEffect(() => {
+    if (authSession.status === "unauthenticated") {
+      router.replace("/");
+    }
+  }, [authSession.status, router]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -345,7 +355,7 @@ export default function DashboardPage() {
 
     setToastMessage(null);
 
-    const token = getStoredAccessToken();
+    const token = accessToken;
     let didLogoutRemote = false;
     let logoutUrl: string | null | undefined;
 
@@ -431,6 +441,25 @@ export default function DashboardPage() {
       );
     }
   });
+
+  if (authSession.status === "loading") {
+    return (
+      <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
+        <DecorativeLeaves />
+        <div className="relative flex min-h-0 flex-1 items-center justify-center px-4">
+          <div className="mevi-login-card flex w-full max-w-sm flex-col items-center gap-3 rounded-[24px] p-6 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-green-700" />
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--mevi-text-primary)" }}
+            >
+              Đang khôi phục phiên đăng nhập...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleModuleClick =
     (mod: ModuleItem) => async (e: React.MouseEvent<HTMLAnchorElement>) => {

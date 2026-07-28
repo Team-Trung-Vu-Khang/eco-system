@@ -10,9 +10,9 @@ import { SurveyPortalHeader } from "./survey-portal-header";
 import { SurveySuccessModal } from "./survey-success-modal";
 
 import { useLogoutMutation } from "@/features/auth/hooks";
+import { useAuthSession } from "@/features/auth/state/auth-session-store";
 import {
   clearStoredAuthSession,
-  getStoredAccessToken,
 } from "@/features/auth/utils";
 import {
   DEFAULT_SURVEY_LOOKUP_VALUE,
@@ -71,6 +71,7 @@ function hasPendingSurvey(surveyDetail?: SurveyResultDetails | null) {
 export function SurveyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const authSession = useAuthSession();
   const initialSurveyType = getInitialSurveyType(
     searchParams.get("surveyType"),
   );
@@ -486,7 +487,7 @@ export function SurveyPageContent() {
   const handleExit = async () => {
     if (isLoggingOut) return;
 
-    const token = getStoredAccessToken();
+    const token = authSession.accessToken;
     let didLogoutRemote = false;
     let logoutUrl: string | null | undefined;
 

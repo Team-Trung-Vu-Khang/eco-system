@@ -1,10 +1,13 @@
-export const TOKEN_STORAGE_KEY = "mevi_access_token";
-export const TOKEN_COOKIE_NAME = "mevi_access_token";
+import {
+  clearAuthSession,
+  setAuthAccessToken,
+  setAuthProfile,
+  getAuthSessionSnapshot,
+} from "@/features/auth/state/auth-session-store";
+
 export const USER_PROFILE_STORAGE_KEY = "mevi_user_profile";
-const TOKEN_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
 export const AUTH_SESSION_KEYS = [
-  TOKEN_STORAGE_KEY,
   USER_PROFILE_STORAGE_KEY,
   "mevi_sso_provider",
   "mevi_user_identifier",
@@ -17,42 +20,49 @@ export const AUTH_SESSION_KEYS = [
 
 export function clearStoredAuthSession() {
   AUTH_SESSION_KEYS.forEach((key) => window.sessionStorage.removeItem(key));
-  document.cookie = `${TOKEN_COOKIE_NAME}=; path=/; max-age=0; samesite=lax`;
+  clearAuthSession();
 }
 
 export function getStoredAccessToken() {
-  const cookieToken = getCookieValue(TOKEN_COOKIE_NAME);
-
-  if (cookieToken) {
-    window.sessionStorage.setItem(TOKEN_STORAGE_KEY, cookieToken);
-    return cookieToken;
-  }
-
-  return window.sessionStorage.getItem(TOKEN_STORAGE_KEY);
+  return getAuthSessionSnapshot().accessToken;
 }
 
 export function getStoredUserName() {
   return window.sessionStorage.getItem("mevi_user_name");
 }
 
-export function setStoredAccessToken(token: string) {
-  window.sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+type StoredAuthProfile = {
+  name?: string | null;
+  phoneNumber?: string | null;
+  companyId?: string | number | null;
+  userId?: string | null;
+};
 
-  const secureFlag = window.location.protocol === "https:" ? "; secure" : "";
+export function storeAuthenticatedProfile(profile: StoredAuthProfile) {
+  const name = profile.name || "";
+  const phone = profile.phoneNumber?.trim() || "";
+  const companyId = profile.companyId || "";
+  const userId = profile.userId || "";
 
-  document.cookie = `${TOKEN_COOKIE_NAME}=${encodeURIComponent(
-    token,
-  )}; path=/; max-age=${TOKEN_COOKIE_MAX_AGE_SECONDS}; samesite=lax${secureFlag}`;
+  window.sessionStorage.setItem(
+    USER_PROFILE_STORAGE_KEY,
+    JSON.stringify(profile),
+  );
+  window.sessionStorage.setItem("mevi_user_identifier", phone);
+  window.sessionStorage.setItem(
+    "mevi_user_name",
+    name || "Tài khoản quản trị MEVI",
+  );
+
+  if (companyId) {
+    window.sessionStorage.setItem("mevi_company_id", String(companyId));
+  }
+
+  if (userId) window.sessionStorage.setItem("mevi_user_id", userId);
+
+  setAuthProfile(profile);
 }
 
-function getCookieValue(name: string) {
-  const cookiePrefix = `${name}=`;
-  const cookie = document.cookie
-    .split(";")
-    .map((value) => value.trim())
-    .find((value) => value.startsWith(cookiePrefix));
-
-  if (!cookie) return null;
-
-  return decodeURIComponent(cookie.slice(cookiePrefix.length));
+export function setStoredAccessToken(token: string) {
+  setAuthAccessToken(token);
 }

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { refreshAccessToken } from "@/features/auth/api";
-import { TOKEN_COOKIE_NAME } from "@/features/auth/utils";
+import {
+  AUTH_SESSION_COOKIE_NAME,
+  LEGACY_AUTH_COOKIE_NAME,
+} from "@/features/auth/constants";
 
 const TOKEN_COOKIE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 const REFRESH_WINDOW_SECONDS = 60;
@@ -43,13 +46,16 @@ function shouldRefreshToken(token: string) {
 function redirectToLogin(request: NextRequest) {
   const response = NextResponse.redirect(new URL("/", request.url));
 
-  response.cookies.delete(TOKEN_COOKIE_NAME);
+  response.cookies.delete(AUTH_SESSION_COOKIE_NAME);
+  response.cookies.delete(LEGACY_AUTH_COOKIE_NAME);
 
   return response;
 }
 
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get(TOKEN_COOKIE_NAME)?.value;
+  const token =
+    request.cookies.get(AUTH_SESSION_COOKIE_NAME)?.value ??
+    request.cookies.get(LEGACY_AUTH_COOKIE_NAME)?.value;
 
   if (!token) {
     return redirectToLogin(request);
@@ -63,12 +69,15 @@ export async function middleware(request: NextRequest) {
     const refreshedToken = await refreshAccessToken(token);
     const response = NextResponse.next();
 
-    response.cookies.set(TOKEN_COOKIE_NAME, refreshedToken, {
+    response.cookies.set(AUTH_SESSION_COOKIE_NAME, refreshedToken, {
       path: "/",
       maxAge: TOKEN_COOKIE_MAX_AGE_SECONDS,
+      httpOnly: true,
       sameSite: "lax",
       secure: request.nextUrl.protocol === "https:",
     });
+
+    response.cookies.delete(LEGACY_AUTH_COOKIE_NAME);
 
     return response;
   } catch {
