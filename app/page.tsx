@@ -2,6 +2,7 @@
 
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
+import { InstallAppButton } from "@/components/install-app-button";
 import {
   ArrowRight,
   BookOpen,
@@ -173,6 +174,8 @@ function LoginPanel({ isLoggingIn, onSubmit }: LoginPanelProps) {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3.5">
+        <InstallAppButton />
+
         <button
           type="submit"
           className="mevi-btn-primary"
