@@ -14,12 +14,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#0b7a5a",
     icons: [
       {
-        src: "/icon.jpeg",
+        src: "/mevi-logo.jpeg",
         sizes: "225x225",
         type: "image/jpeg",
       },
       {
-        src: "/apple-icon.jpeg",
+        src: "/mevi-logo.jpeg",
         sizes: "225x225",
         type: "image/jpeg",
       },

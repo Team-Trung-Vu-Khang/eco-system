@@ -9,8 +9,8 @@ export const metadata: Metadata = {
     "Nền tảng quản lý nông nghiệp toàn diện: Đào tạo (Edu), Nông trại (Farm), Nhà máy (Factory), Cửa hàng (Shop). Một tài khoản — đăng nhập toàn hệ thống.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon.jpeg",
-    apple: "/apple-icon.jpeg",
+    icon: "/mevi-logo.jpeg",
+    apple: "/mevi-logo.jpeg",
   },
   appleWebApp: {
     capable: true,

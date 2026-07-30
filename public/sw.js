@@ -5,8 +5,7 @@ const PRECACHE_URLS = [
   "/",
   "/manifest.webmanifest",
   "/favicon.ico",
-  "/icon.jpeg",
-  "/apple-icon.jpeg",
+  "/mevi-logo.jpeg",
 ];
 
 self.addEventListener("install", (event) => {
