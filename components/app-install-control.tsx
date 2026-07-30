@@ -15,19 +15,34 @@ type BeforeInstallPromptEvent = Event & {
 
 const APPLE_GUIDE_IMAGES = [
   {
-    src: "/install-guide-1.svg",
-    alt: "Bước 1: Mở menu chia sẻ",
+    src: "/install-guide-1.webp",
+    alt: "Bước 1: Mở menu trình duyệt",
     title: "Bước 1",
   },
   {
-    src: "/install-guide-2.svg",
-    alt: "Bước 2: Chọn thêm vào màn hình chính",
+    src: "/install-guide-2.webp",
+    alt: "Bước 2: Nhấn nút Chia sẻ",
     title: "Bước 2",
   },
   {
-    src: "/install-guide-3.svg",
-    alt: "Bước 3: Mở app từ màn hình chính",
+    src: "/install-guide-3.webp",
+    alt: "Bước 3: Nhấn vào nút Thêm",
     title: "Bước 3",
+  },
+  {
+    src: "/install-guide-4.webp",
+    alt: "Bước 4: Chọn Thêm vào Màn hình chính",
+    title: "Bước 4",
+  },
+  {
+    src: "/install-guide-5.webp",
+    alt: "Bước 5: Xác nhận thêm ứng dụng",
+    title: "Bước 5",
+  },
+  {
+    src: "/install-guide-6.webp",
+    alt: "Bước 6: Hoàn thành và mở MEVI",
+    title: "Bước 6",
   },
 ] as const;
 
@@ -204,7 +219,7 @@ export function AppInstallControl() {
                     className="mt-1 text-xs"
                     style={{ color: "var(--mevi-text-secondary)" }}
                   >
-                    Làm theo 3 bước trong carousel bên dưới.
+                    Làm theo 6 bước trong carousel bên dưới.
                   </p>
                 </div>
 
@@ -359,7 +374,7 @@ export function AppInstallControl() {
               role="dialog"
               aria-modal="true"
               aria-label="Cách cài MEVI trên Android"
-              className="w-full max-w-md rounded-[24px] border border-white/60 bg-white shadow-[0_24px_60px_-20px_rgba(6,78,59,0.4)]"
+              className="w-full max-w-md rounded-[24px] border border-white/60 bg-white shadow-[0_24px_60px_-20px_rgba(6,78,59,0.4)] overflow-hidden"
               onClick={(event) => event.stopPropagation()}
             >
               <div
