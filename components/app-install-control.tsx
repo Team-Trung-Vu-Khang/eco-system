@@ -53,6 +53,23 @@ export function AppInstallControl() {
     () => true,
     () => false,
   );
+  const isCompactViewport = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => {};
+      }
+
+      const mediaQuery = window.matchMedia("(max-width: 1023px)");
+      mediaQuery.addEventListener("change", onStoreChange);
+
+      return () => mediaQuery.removeEventListener("change", onStoreChange);
+    },
+    () =>
+      typeof window !== "undefined"
+        ? window.matchMedia("(max-width: 1023px)").matches
+        : false,
+    () => false,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [deferredPrompt, setDeferredPrompt] =
@@ -67,6 +84,7 @@ export function AppInstallControl() {
     if (isAndroidDevice()) return "android";
     return "other";
   }, [isMounted]);
+  const shouldShowInstallControl = isCompactViewport;
 
   useEffect(() => {
     if (!isMounted) return;
@@ -157,7 +175,7 @@ export function AppInstallControl() {
     platform === "apple" && isOpen && typeof document !== "undefined"
       ? createPortal(
           <div
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6"
             role="presentation"
             onClick={closeDialog}
           >
@@ -165,7 +183,7 @@ export function AppInstallControl() {
               role="dialog"
               aria-modal="true"
               aria-label="Hướng dẫn cài đặt ứng dụng MEVI"
-              className="mevi-install-dialog relative w-full max-w-[720px] overflow-hidden rounded-[28px] border border-white/60 bg-white shadow-[0_30px_80px_-24px_rgba(6,78,59,0.45)]"
+              className="mevi-install-dialog relative w-full max-w-[720px] max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[28px] border border-white/60 bg-white shadow-[0_30px_80px_-24px_rgba(6,78,59,0.45)] sm:max-h-[calc(100dvh-3rem)]"
               onClick={(event) => event.stopPropagation()}
             >
               <div
@@ -328,7 +346,9 @@ export function AppInstallControl() {
       : null;
 
   const androidHint =
-    platform === "android" && isAndroidHintOpen && typeof document !== "undefined"
+    platform === "android" &&
+    isAndroidHintOpen &&
+    typeof document !== "undefined"
       ? createPortal(
           <div
             className="fixed inset-0 z-[120] flex items-end justify-center bg-black/30 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6"
@@ -360,8 +380,8 @@ export function AppInstallControl() {
                     className="mt-1 text-xs leading-5"
                     style={{ color: "var(--mevi-text-secondary)" }}
                   >
-                    Nếu trình duyệt chưa hiện nút cài đặt, hãy mở menu Chrome
-                    và chọn “Install app” hoặc “Add to Home screen”.
+                    Nếu trình duyệt chưa hiện nút cài đặt, hãy mở menu Chrome và
+                    chọn “Install app” hoặc “Add to Home screen”.
                   </p>
                 </div>
 
@@ -382,17 +402,23 @@ export function AppInstallControl() {
                 >
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: "var(--mevi-green-50)", color: "var(--mevi-green-700)" }}
+                    style={{
+                      background: "var(--mevi-green-50)",
+                      color: "var(--mevi-green-700)",
+                    }}
                   >
                     <Download className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold" style={{ color: "var(--mevi-text-primary)" }}>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--mevi-text-primary)" }}
+                    >
                       Tại sao không tự cài ngay?
                     </p>
                     <p className="mt-1 text-sm leading-6">
-                      Một số trình duyệt Android chưa cấp quyền cài PWA trực tiếp
-                      cho trang này. Nút ở header vẫn là nút tải, nhưng nếu
+                      Một số trình duyệt Android chưa cấp quyền cài PWA trực
+                      tiếp cho trang này. Nút ở header vẫn là nút tải, nhưng nếu
                       prompt chưa xuất hiện thì bạn cần dùng menu trình duyệt.
                     </p>
                   </div>
@@ -416,7 +442,7 @@ export function AppInstallControl() {
         )
       : null;
 
-  return (
+  return shouldShowInstallControl ? (
     <>
       <div className="relative inline-flex items-center">
         <button
@@ -444,5 +470,5 @@ export function AppInstallControl() {
       {dialog}
       {androidHint}
     </>
-  );
+  ) : null;
 }
