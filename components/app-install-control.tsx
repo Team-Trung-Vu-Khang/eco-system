@@ -248,6 +248,7 @@ export function AppInstallControl() {
                     <Image
                       src={APPLE_GUIDE_IMAGES[activeSlide].src}
                       alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
+                      height={300}
                       className="h-[300px] w-full object-fill"
                       priority
                     />
