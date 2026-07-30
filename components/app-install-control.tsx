@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Download, LaptopMinimal, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -325,7 +331,28 @@ export function AppInstallControl() {
                     </div>
                   ))}
                 </div>
-
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {APPLE_GUIDE_IMAGES.map((guide, index) => (
+                    <button
+                      key={guide.src}
+                      type="button"
+                      onClick={() => scrollToSlide(index)}
+                      className="h-2.5 rounded-full transition-all duration-200"
+                      style={{
+                        width: index === activeSlide ? "2rem" : "0.75rem",
+                        background:
+                          index === activeSlide
+                            ? "var(--mevi-green-700)"
+                            : "rgba(11, 122, 90, 0.22)",
+                      }}
+                      aria-label={`Chuyển đến ${guide.title}`}
+                      aria-pressed={index === activeSlide}
+                    />
+                  ))}
+                </div>
+                <div className="text-center text-xs text-[var(--mevi-text-muted)]">
+                  Vuốt ngang để chuyển slide, hoặc chạm vào chấm bên dưới.
+                </div>
                 <div className="flex flex-col gap-5 border-t border-[rgba(212,229,216,0.8)] px-5 py-5 sm:px-6 sm:py-6">
                   <div className="space-y-3">
                     <div
@@ -368,30 +395,6 @@ export function AppInstallControl() {
                     >
                       Đã hiểu
                     </button>
-
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      {APPLE_GUIDE_IMAGES.map((guide, index) => (
-                        <button
-                          key={guide.src}
-                          type="button"
-                          onClick={() => scrollToSlide(index)}
-                          className="h-2.5 rounded-full transition-all duration-200"
-                          style={{
-                            width: index === activeSlide ? "2rem" : "0.75rem",
-                            background:
-                              index === activeSlide
-                                ? "var(--mevi-green-700)"
-                                : "rgba(11, 122, 90, 0.22)",
-                          }}
-                          aria-label={`Chuyển đến ${guide.title}`}
-                          aria-pressed={index === activeSlide}
-                        />
-                      ))}
-                    </div>
-
-                    <div className="text-center text-xs text-[var(--mevi-text-muted)]">
-                      Vuốt ngang để chuyển slide, hoặc chạm vào chấm bên dưới.
-                    </div>
                   </div>
                 </div>
               </div>
