@@ -1,0 +1,18 @@
+<svg width="960" height="960" viewBox="0 0 960 960" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="960" rx="64" fill="#FDFBF3"/>
+  <circle cx="480" cy="390" r="240" fill="#FEF9C3"/>
+  <rect x="294" y="170" width="372" height="560" rx="52" fill="#FFFFFF" stroke="#D4E5D8" stroke-width="10"/>
+  <rect x="336" y="232" width="288" height="122" rx="28" fill="#ECFDF5"/>
+  <rect x="336" y="386" width="288" height="72" rx="24" fill="#F8F5EC"/>
+  <rect x="336" y="482" width="288" height="72" rx="24" fill="#F8F5EC"/>
+  <rect x="336" y="578" width="288" height="72" rx="24" fill="#F8F5EC"/>
+  <path d="M372 264H516" stroke="#0B7A5A" stroke-width="18" stroke-linecap="round"/>
+  <path d="M372 420H556" stroke="#4A6E5A" stroke-width="14" stroke-linecap="round"/>
+  <path d="M372 516H556" stroke="#4A6E5A" stroke-width="14" stroke-linecap="round"/>
+  <path d="M372 612H556" stroke="#4A6E5A" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="588" cy="264" r="28" fill="#0B7A5A"/>
+  <path d="M588 252V276" stroke="#FDFBF3" stroke-width="10" stroke-linecap="round"/>
+  <path d="M576 264H600" stroke="#FDFBF3" stroke-width="10" stroke-linecap="round"/>
+  <text x="480" y="790" text-anchor="middle" fill="#1A3C2A" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="700">Chọn “Thêm vào Màn hình chính”</text>
+  <text x="480" y="844" text-anchor="middle" fill="#4A6E5A" font-family="Inter, Arial, sans-serif" font-size="28">Cài MEVI như một ứng dụng</text>
+</svg>

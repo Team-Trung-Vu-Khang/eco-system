@@ -1,0 +1,448 @@
+"use client";
+
+import Image from "next/image";
+import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Download, LaptopMinimal, MoveLeft, MoveRight, X } from "lucide-react";
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+};
+
+const APPLE_GUIDE_IMAGES = [
+  {
+    src: "/install-guide-1.svg",
+    alt: "Bước 1: Mở menu chia sẻ",
+    title: "Bước 1",
+  },
+  {
+    src: "/install-guide-2.svg",
+    alt: "Bước 2: Chọn thêm vào màn hình chính",
+    title: "Bước 2",
+  },
+  {
+    src: "/install-guide-3.svg",
+    alt: "Bước 3: Mở app từ màn hình chính",
+    title: "Bước 3",
+  },
+] as const;
+
+function isAppleDevice() {
+  if (typeof navigator === "undefined") return false;
+
+  const ua = navigator.userAgent.toLowerCase();
+  const platform = navigator.platform?.toLowerCase() ?? "";
+  return (
+    /iphone|ipad|ipod/.test(ua) ||
+    (platform.includes("mac") && "ontouchend" in document)
+  );
+}
+
+function isAndroidDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /android/.test(navigator.userAgent.toLowerCase());
+}
+
+export function AppInstallControl() {
+  const isMounted = useSyncExternalStore(
+    () => () => null,
+    () => true,
+    () => false,
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const [isAndroidHintOpen, setIsAndroidHintOpen] = useState(false);
+
+  const platform = useMemo(() => {
+    if (!isMounted) return "unknown";
+    if (isAppleDevice()) return "apple";
+    if (isAndroidDevice()) return "android";
+    return "other";
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
+    };
+
+    const onAppInstalled = () => {
+      setDeferredPrompt(null);
+      setIsOpen(false);
+      setIsInstalling(false);
+    };
+
+    window.addEventListener(
+      "beforeinstallprompt",
+      onBeforeInstallPrompt as EventListener,
+    );
+    window.addEventListener("appinstalled", onAppInstalled);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        onBeforeInstallPrompt as EventListener,
+      );
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, [isMounted]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
+
+  function openInstallFlow() {
+    if (platform === "apple") {
+      setIsOpen(true);
+      return;
+    }
+
+    if (deferredPrompt) {
+      setIsInstalling(true);
+      void (async () => {
+        await deferredPrompt.prompt();
+        await deferredPrompt.userChoice.catch(() => null);
+        setDeferredPrompt(null);
+        setIsInstalling(false);
+      })();
+      return;
+    }
+
+    if (platform === "android") {
+      setIsAndroidHintOpen(true);
+    }
+  }
+
+  function closeAndroidHint() {
+    setIsAndroidHintOpen(false);
+  }
+
+  function closeDialog() {
+    setIsOpen(false);
+  }
+
+  function nextSlide() {
+    setActiveSlide((current) => (current + 1) % APPLE_GUIDE_IMAGES.length);
+  }
+
+  function prevSlide() {
+    setActiveSlide(
+      (current) =>
+        (current - 1 + APPLE_GUIDE_IMAGES.length) % APPLE_GUIDE_IMAGES.length,
+    );
+  }
+
+  const tooltipLabel = platform === "apple" ? "Hướng dẫn cài đặt" : "Tải app";
+
+  const dialog =
+    platform === "apple" && isOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
+            role="presentation"
+            onClick={closeDialog}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Hướng dẫn cài đặt ứng dụng MEVI"
+              className="mevi-install-dialog relative w-full max-w-[720px] overflow-hidden rounded-[28px] border border-white/60 bg-white shadow-[0_30px_80px_-24px_rgba(6,78,59,0.45)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div
+                className="flex items-center justify-between gap-4 border-b border-[rgba(212,229,216,0.8)] px-5 py-4 sm:px-6"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(236,253,245,0.9), rgba(248,245,236,0.95))",
+                }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--mevi-green-700)" }}
+                  >
+                    Cài MEVI vào thiết bị
+                  </p>
+                  <p
+                    className="mt-1 text-xs"
+                    style={{ color: "var(--mevi-text-secondary)" }}
+                  >
+                    Làm theo 3 bước trong carousel bên dưới.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeDialog}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
+                  aria-label="Đóng"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="grid gap-0 md:grid-cols-[1.2fr_0.8fr]">
+                <div className="relative flex items-center justify-center bg-[#f8f5ec] p-4 sm:p-6">
+                  <button
+                    type="button"
+                    onClick={prevSlide}
+                    className="absolute left-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(212,229,216,0.8)] bg-white/95 shadow-sm transition-transform hover:-translate-y-0.5"
+                    aria-label="Ảnh trước"
+                  >
+                    <MoveLeft className="h-4 w-4" />
+                  </button>
+
+                  <div className="w-full max-w-[320px]">
+                    <Image
+                      src={APPLE_GUIDE_IMAGES[activeSlide].src}
+                      alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
+                      width={640}
+                      height={640}
+                      className="h-auto w-full rounded-[24px] border border-[rgba(212,229,216,0.8)] bg-white object-cover shadow-[0_16px_32px_-24px_rgba(6,78,59,0.35)]"
+                      priority
+                    />
+                    <div className="mt-3 text-center">
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--mevi-text-primary)" }}
+                      >
+                        {APPLE_GUIDE_IMAGES[activeSlide].title}
+                      </p>
+                      <p
+                        className="mt-1 text-xs"
+                        style={{ color: "var(--mevi-text-secondary)" }}
+                      >
+                        {APPLE_GUIDE_IMAGES[activeSlide].alt}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={nextSlide}
+                    className="absolute right-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(212,229,216,0.8)] bg-white/95 shadow-sm transition-transform hover:-translate-y-0.5"
+                    aria-label="Ảnh sau"
+                  >
+                    <MoveRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col justify-between gap-5 px-5 py-5 sm:px-6 sm:py-6">
+                  <div className="space-y-3">
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+                      style={{
+                        color: "var(--mevi-green-700)",
+                        background: "var(--mevi-green-50)",
+                      }}
+                    >
+                      <LaptopMinimal className="h-3.5 w-3.5" />
+                      Dành cho Apple
+                    </div>
+
+                    <h3
+                      className="text-xl font-bold"
+                      style={{ color: "var(--mevi-text-primary)" }}
+                    >
+                      Cài MEVI từ Safari
+                    </h3>
+
+                    <p
+                      className="text-sm leading-6"
+                      style={{ color: "var(--mevi-text-secondary)" }}
+                    >
+                      Apple không hỗ trợ nút cài đặt trực tiếp như Android, nên
+                      chúng tôi hiển thị hướng dẫn từng bước để bạn thêm MEVI
+                      vào màn hình chính.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveSlide(0);
+
+                        if (deferredPrompt) {
+                          setIsInstalling(true);
+                          void (async () => {
+                            await deferredPrompt.prompt();
+                            await deferredPrompt.userChoice.catch(() => null);
+                            setDeferredPrompt(null);
+                            setIsInstalling(false);
+                            setIsOpen(false);
+                          })();
+                        }
+                      }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+                      }}
+                      disabled={isInstalling && platform !== "apple"}
+                    >
+                      <Download className="h-4 w-4" />
+                      {isInstalling ? "Đang mở cài đặt..." : "Xem hướng dẫn"}
+                    </button>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span style={{ color: "var(--mevi-text-muted)" }}>
+                        Vuốt hoặc bấm mũi tên để xem từng bước.
+                      </span>
+                      <span
+                        className="rounded-full px-2.5 py-1 font-semibold"
+                        style={{
+                          color: "var(--mevi-text-secondary)",
+                          background: "rgba(236,253,245,0.8)",
+                        }}
+                      >
+                        {activeSlide + 1}/{APPLE_GUIDE_IMAGES.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  const androidHint =
+    platform === "android" && isAndroidHintOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[120] flex items-end justify-center bg-black/30 px-4 py-4 backdrop-blur-sm sm:items-center sm:py-6"
+            role="presentation"
+            onClick={closeAndroidHint}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Cách cài MEVI trên Android"
+              className="w-full max-w-md rounded-[24px] border border-white/60 bg-white shadow-[0_24px_60px_-20px_rgba(6,78,59,0.4)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div
+                className="flex items-start justify-between gap-4 border-b border-[rgba(212,229,216,0.8)] px-5 py-4"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(236,253,245,0.92), rgba(248,245,236,0.96))",
+                }}
+              >
+                <div>
+                  <p
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--mevi-green-700)" }}
+                  >
+                    Tải MEVI trên Android
+                  </p>
+                  <p
+                    className="mt-1 text-xs leading-5"
+                    style={{ color: "var(--mevi-text-secondary)" }}
+                  >
+                    Nếu trình duyệt chưa hiện nút cài đặt, hãy mở menu Chrome
+                    và chọn “Install app” hoặc “Add to Home screen”.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeAndroidHint}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-black/5"
+                  aria-label="Đóng"
+                >
+                  <X className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 px-5 py-5">
+                <div
+                  className="flex items-start gap-3 rounded-2xl border border-[rgba(212,229,216,0.8)] bg-[rgba(248,245,236,0.65)] p-4"
+                  style={{ color: "var(--mevi-text-secondary)" }}
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: "var(--mevi-green-50)", color: "var(--mevi-green-700)" }}
+                  >
+                    <Download className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold" style={{ color: "var(--mevi-text-primary)" }}>
+                      Tại sao không tự cài ngay?
+                    </p>
+                    <p className="mt-1 text-sm leading-6">
+                      Một số trình duyệt Android chưa cấp quyền cài PWA trực tiếp
+                      cho trang này. Nút ở header vẫn là nút tải, nhưng nếu
+                      prompt chưa xuất hiện thì bạn cần dùng menu trình duyệt.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeAndroidHint}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+                  }}
+                >
+                  Hiểu rồi
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      <div className="relative inline-flex items-center">
+        <button
+          type="button"
+          onClick={openInstallFlow}
+          onMouseEnter={() => setIsTooltipOpen(true)}
+          onMouseLeave={() => setIsTooltipOpen(false)}
+          onFocus={() => setIsTooltipOpen(true)}
+          onBlur={() => setIsTooltipOpen(false)}
+          className="group inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(212,229,216,0.95)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(236,253,245,0.92))] text-[var(--mevi-green-700)] shadow-[0_12px_28px_-22px_rgba(6,78,59,0.45)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[rgba(11,122,90,0.22)] hover:shadow-[0_18px_40px_-24px_rgba(6,78,59,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(11,122,90,0.18)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={tooltipLabel}
+          title={tooltipLabel}
+          disabled={isInstalling}
+        >
+          <Download className="h-4.5 w-4.5 transition-transform duration-200 group-hover:scale-[1.05]" />
+        </button>
+
+        {isTooltipOpen ? (
+          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/60 bg-[rgba(26,60,42,0.95)] px-3 py-1.5 text-xs font-semibold leading-none text-white shadow-[0_14px_28px_-18px_rgba(0,0,0,0.42)]">
+            {tooltipLabel}
+          </div>
+        ) : null}
+      </div>
+
+      {dialog}
+      {androidHint}
+    </>
+  );
+}

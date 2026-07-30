@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "../components/providers";
 import { StudentSupportWidget } from "../components/student-support-widget";
@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   title: "MEVI — Hệ sinh thái Nông nghiệp thông minh",
   description:
     "Nền tảng quản lý nông nghiệp toàn diện: Đào tạo (Edu), Nông trại (Farm), Nhà máy (Factory), Cửa hàng (Shop). Một tài khoản — đăng nhập toàn hệ thống.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.jpeg",
+    apple: "/apple-icon.jpeg",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "MEVI",
+    statusBarStyle: "default",
+  },
   keywords: [
     "MEVI",
     "nông nghiệp thông minh",
@@ -15,6 +25,10 @@ export const metadata: Metadata = {
     "eco farm",
     "truy xuất nguồn gốc",
   ],
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b7a5a",
 };
 
 export default function RootLayout({

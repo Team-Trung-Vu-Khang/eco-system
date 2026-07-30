@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
+import { AppInstallControl } from "@/components/app-install-control";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
 import { useAuthSession } from "@/features/auth/state/auth-session-store";
@@ -617,6 +618,7 @@ export default function DashboardPage() {
           rightSlotClassName="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4"
           rightSlot={
             <>
+              <AppInstallControl />
               <div
                 className="flex min-w-0 items-center gap-2 text-sm"
                 style={{ color: "var(--mevi-text-secondary)" }}

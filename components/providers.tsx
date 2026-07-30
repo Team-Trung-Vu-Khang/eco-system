@@ -70,6 +70,18 @@ export default function Providers({
     };
   }, []);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") {
+      return;
+    }
+
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    void navigator.serviceWorker.register("/sw.js").catch(() => null);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );

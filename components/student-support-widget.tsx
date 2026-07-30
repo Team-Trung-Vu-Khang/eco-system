@@ -200,7 +200,7 @@ export function StudentSupportWidget() {
             <p className="whitespace-nowrap text-[11px] font-semibold leading-none text-[var(--mevi-text-primary)] sm:text-sm">
               Bạn cần hỗ trợ? Liên hệ ở đây
             </p>
-            <span className="absolute right-[-6px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-r border-t border-[rgba(212,229,216,0.95)] bg-white/98" />
+            <span className="absolute right-[-4px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-45 border-r border-t border-[rgba(212,229,216,0.95)] bg-white/98" />
           </div>
         </div>
       ) : null}
