@@ -350,7 +350,7 @@ export function AppInstallControl() {
                     />
                   ))}
                 </div>
-                <div className="text-center text-xs text-[var(--mevi-text-muted)]">
+                <div className="text-center text-xs text-[var(--mevi-text-muted)] py-2">
                   Vuốt ngang để chuyển slide, hoặc chạm vào chấm bên dưới.
                 </div>
                 <div className="flex flex-col gap-5 border-t border-[rgba(212,229,216,0.8)] px-5 py-5 sm:px-6 sm:py-6">
