@@ -248,9 +248,7 @@ export function AppInstallControl() {
                     <Image
                       src={APPLE_GUIDE_IMAGES[activeSlide].src}
                       alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
-                      width={640}
-                      height={640}
-                      className="h-auto w-full rounded-[24px] border border-[rgba(212,229,216,0.8)] bg-white object-cover shadow-[0_16px_32px_-24px_rgba(6,78,59,0.35)]"
+                      className="h-[300px] w-full object-fill"
                       priority
                     />
                     <div className="mt-3 text-center">
