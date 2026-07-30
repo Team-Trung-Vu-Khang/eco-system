@@ -62,6 +62,21 @@ function isAndroidDevice() {
   return /android/.test(navigator.userAgent.toLowerCase());
 }
 
+function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+
+  const standaloneNavigator = (
+    navigator as Navigator & {
+      standalone?: boolean;
+    }
+  ).standalone;
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    standaloneNavigator === true
+  );
+}
+
 export function AppInstallControl() {
   const isMounted = useSyncExternalStore(
     () => () => null,
@@ -99,7 +114,27 @@ export function AppInstallControl() {
     if (isAndroidDevice()) return "android";
     return "other";
   }, [isMounted]);
-  const shouldShowInstallControl = isCompactViewport;
+  const isInstalledApp = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => {};
+      }
+
+      const mediaQuery = window.matchMedia("(display-mode: standalone)");
+      const handler = () => onStoreChange();
+
+      mediaQuery.addEventListener("change", handler);
+      window.addEventListener("appinstalled", handler);
+
+      return () => {
+        mediaQuery.removeEventListener("change", handler);
+        window.removeEventListener("appinstalled", handler);
+      };
+    },
+    isStandaloneApp,
+    () => false,
+  );
+  const shouldShowInstallControl = isCompactViewport && !isInstalledApp;
 
   useEffect(() => {
     if (!isMounted) return;
@@ -244,12 +279,12 @@ export function AppInstallControl() {
                     <MoveLeft className="h-4 w-4" />
                   </button>
 
-                  <div className="w-full max-w-[320px]">
+                  <div className="flex w-full max-w-[320px] items-center justify-center">
                     <Image
                       src={APPLE_GUIDE_IMAGES[activeSlide].src}
                       alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
                       height={300}
-                      className="h-[300px] self-center object-contain"
+                      className="h-[300px] w-auto object-contain object-center"
                       priority
                     />
                     <div className="mt-3 text-center">
@@ -309,36 +344,21 @@ export function AppInstallControl() {
                   </div>
 
                   <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveSlide(0);
-
-                        if (deferredPrompt) {
-                          setIsInstalling(true);
-                          void (async () => {
-                            await deferredPrompt.prompt();
-                            await deferredPrompt.userChoice.catch(() => null);
-                            setDeferredPrompt(null);
-                            setIsInstalling(false);
-                            setIsOpen(false);
-                          })();
-                        }
-                      }}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
-                      }}
-                      disabled={isInstalling && platform !== "apple"}
-                    >
-                      <Download className="h-4 w-4" />
-                      {isInstalling ? "Đang mở cài đặt..." : "Xem hướng dẫn"}
-                    </button>
+                  <button
+                    type="button"
+                    onClick={closeDialog}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+                    }}
+                  >
+                    Đã hiểu
+                  </button>
 
                     <div className="flex items-center justify-between text-xs">
                       <span style={{ color: "var(--mevi-text-muted)" }}>
-                        Vuốt hoặc bấm mũi tên để xem từng bước.
+                        Bấm mũi tên để xem từng bước.
                       </span>
                       <span
                         className="rounded-full px-2.5 py-1 font-semibold"
