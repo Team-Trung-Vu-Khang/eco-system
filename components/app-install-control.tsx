@@ -234,7 +234,7 @@ export function AppInstallControl() {
               </div>
 
               <div className="grid gap-0 md:grid-cols-[1.2fr_0.8fr]">
-                <div className="relative flex items-center justify-center bg-[#f8f5ec] p-4 sm:p-6">
+                <div className="relative flex items-center justify-center p-4 sm:p-6">
                   <button
                     type="button"
                     onClick={prevSlide}
@@ -249,7 +249,7 @@ export function AppInstallControl() {
                       src={APPLE_GUIDE_IMAGES[activeSlide].src}
                       alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
                       height={300}
-                      className="h-[300px] w-full object-fill"
+                      className="h-[300px] self-center object-contain"
                       priority
                     />
                     <div className="mt-3 text-center">
