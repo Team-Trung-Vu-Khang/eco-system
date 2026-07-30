@@ -9,12 +9,14 @@ export type AuthSessionState = {
   accessToken: string | null;
   profile: AuthMeProfile | null;
   status: AuthSessionStatus;
+  bootstrapComplete: boolean;
 };
 
 const initialState: AuthSessionState = {
   accessToken: null,
   profile: null,
   status: "loading",
+  bootstrapComplete: false,
 };
 
 let authSessionState = initialState;
@@ -47,6 +49,15 @@ export function setAuthSession(
   emitChange();
 }
 
+export function setAuthBootstrapComplete() {
+  authSessionState = {
+    ...authSessionState,
+    bootstrapComplete: true,
+  };
+
+  emitChange();
+}
+
 export function setAuthAccessToken(accessToken: string | null) {
   setAuthSession({
     accessToken,
@@ -66,6 +77,7 @@ export function clearAuthSession() {
     accessToken: null,
     profile: null,
     status: "unauthenticated",
+    bootstrapComplete: authSessionState.bootstrapComplete,
   };
 
   emitChange();

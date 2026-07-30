@@ -27,7 +27,11 @@ import {
   setStoredAccessToken,
   storeAuthenticatedProfile,
 } from "@/features/auth/utils";
-import { useAuthSession, setAuthSession } from "@/features/auth/state/auth-session-store";
+import {
+  setAuthBootstrapComplete,
+  setAuthSession,
+  useAuthSession,
+} from "@/features/auth/state/auth-session-store";
 import {
   fetchSurveyDetail,
   type SurveyRequestContext,
@@ -165,6 +169,7 @@ function AuthCallbackContent() {
           profile,
           status: "authenticated",
         });
+        setAuthBootstrapComplete();
 
         if (profile.mustChangePassword) {
           setMustChangePassword(true);
@@ -185,6 +190,10 @@ function AuthCallbackContent() {
             ? error.message
             : "Không lấy được thông tin tài khoản. Vui lòng thử lại.",
         );
+      } finally {
+        if (!isActive || isExitRequestedRef.current) return;
+
+        setAuthBootstrapComplete();
       }
     }
 

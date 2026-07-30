@@ -186,6 +186,7 @@ function DecorativeLeaves() {
 export default function DashboardPage() {
   const router = useRouter();
   const authSession = useAuthSession();
+  const isBootstrapComplete = authSession.bootstrapComplete;
   const accessToken = authSession.accessToken;
   const authMeQuery = useAuthMeQuery(
     authSession.status === "authenticated" ? accessToken : null,
@@ -231,10 +232,10 @@ export default function DashboardPage() {
   }, [authMeQuery.data]);
 
   useEffect(() => {
-    if (authSession.status === "unauthenticated") {
+    if (isBootstrapComplete && authSession.status === "unauthenticated") {
       router.replace("/");
     }
-  }, [authSession.status, router]);
+  }, [authSession.status, isBootstrapComplete, router]);
 
   useEffect(() => {
     if (!toastMessage) return;

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Download, LaptopMinimal, MoveLeft, MoveRight, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Download, LaptopMinimal, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -107,6 +107,7 @@ export function AppInstallControl() {
   const [isInstalling, setIsInstalling] = useState(false);
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const [isAndroidHintOpen, setIsAndroidHintOpen] = useState(false);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
 
   const platform = useMemo(() => {
     if (!isMounted) return "unknown";
@@ -208,15 +209,28 @@ export function AppInstallControl() {
     setIsOpen(false);
   }
 
-  function nextSlide() {
-    setActiveSlide((current) => (current + 1) % APPLE_GUIDE_IMAGES.length);
+  function scrollToSlide(index: number) {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    carousel.scrollTo({
+      left: carousel.clientWidth * index,
+      behavior: "smooth",
+    });
   }
 
-  function prevSlide() {
-    setActiveSlide(
-      (current) =>
-        (current - 1 + APPLE_GUIDE_IMAGES.length) % APPLE_GUIDE_IMAGES.length,
+  function handleCarouselScroll() {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const slideWidth = carousel.clientWidth || 1;
+    const nextIndex = Math.round(carousel.scrollLeft / slideWidth);
+    const clampedIndex = Math.min(
+      APPLE_GUIDE_IMAGES.length - 1,
+      Math.max(0, nextIndex),
     );
+
+    setActiveSlide(clampedIndex);
   }
 
   const tooltipLabel = platform === "apple" ? "Hướng dẫn cài đặt" : "Tải app";
@@ -254,7 +268,7 @@ export function AppInstallControl() {
                     className="mt-1 text-xs"
                     style={{ color: "var(--mevi-text-secondary)" }}
                   >
-                    Làm theo 6 bước trong carousel bên dưới.
+                    Vuốt ngang để xem 6 bước cài đặt.
                   </p>
                 </div>
 
@@ -268,52 +282,51 @@ export function AppInstallControl() {
                 </button>
               </div>
 
-              <div className="grid gap-0 md:grid-cols-[1.2fr_0.8fr]">
-                <div className="relative flex items-center justify-center p-4 sm:p-6">
-                  <button
-                    type="button"
-                    onClick={prevSlide}
-                    className="absolute left-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(212,229,216,0.8)] bg-white/95 shadow-sm transition-transform hover:-translate-y-0.5"
-                    aria-label="Ảnh trước"
-                  >
-                    <MoveLeft className="h-4 w-4" />
-                  </button>
-
-                  <div className="flex w-full max-w-[320px] items-center justify-center">
-                    <Image
-                      src={APPLE_GUIDE_IMAGES[activeSlide].src}
-                      alt={APPLE_GUIDE_IMAGES[activeSlide].alt}
-                      height={300}
-                      className="h-[300px] w-auto object-contain object-center"
-                      priority
-                    />
-                    <div className="mt-3 text-center">
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: "var(--mevi-text-primary)" }}
-                      >
-                        {APPLE_GUIDE_IMAGES[activeSlide].title}
-                      </p>
-                      <p
-                        className="mt-1 text-xs"
-                        style={{ color: "var(--mevi-text-secondary)" }}
-                      >
-                        {APPLE_GUIDE_IMAGES[activeSlide].alt}
-                      </p>
+              <div className="flex flex-col">
+                <div
+                  ref={carouselRef}
+                  onScroll={handleCarouselScroll}
+                  className="flex w-full snap-x snap-mandatory overflow-x-auto scroll-smooth overscroll-x-contain touch-pan-x"
+                  style={{
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                  }}
+                >
+                  {APPLE_GUIDE_IMAGES.map((guide, index) => (
+                    <div
+                      key={guide.src}
+                      className="min-w-full snap-center px-4 py-5 sm:px-6 sm:py-6"
+                    >
+                      <div className="mx-auto flex w-full max-w-[520px] flex-col items-center">
+                        <div className="relative flex h-[300px] w-full items-center justify-center sm:h-[360px]">
+                          <Image
+                            src={guide.src}
+                            alt={guide.alt}
+                            fill
+                            className="object-contain object-center"
+                            priority={index === 0}
+                          />
+                        </div>
+                        <div className="mt-4 text-center">
+                          <p
+                            className="text-sm font-semibold"
+                            style={{ color: "var(--mevi-text-primary)" }}
+                          >
+                            {guide.title}
+                          </p>
+                          <p
+                            className="mt-1 text-xs leading-5"
+                            style={{ color: "var(--mevi-text-secondary)" }}
+                          >
+                            {guide.alt}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={nextSlide}
-                    className="absolute right-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(212,229,216,0.8)] bg-white/95 shadow-sm transition-transform hover:-translate-y-0.5"
-                    aria-label="Ảnh sau"
-                  >
-                    <MoveRight className="h-4 w-4" />
-                  </button>
+                  ))}
                 </div>
 
-                <div className="flex flex-col justify-between gap-5 px-5 py-5 sm:px-6 sm:py-6">
+                <div className="flex flex-col gap-5 border-t border-[rgba(212,229,216,0.8)] px-5 py-5 sm:px-6 sm:py-6">
                   <div className="space-y-3">
                     <div
                       className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
@@ -344,31 +357,40 @@ export function AppInstallControl() {
                   </div>
 
                   <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={closeDialog}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
-                    }}
-                  >
-                    Đã hiểu
-                  </button>
+                    <button
+                      type="button"
+                      onClick={closeDialog}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+                      }}
+                    >
+                      Đã hiểu
+                    </button>
 
-                    <div className="flex items-center justify-between text-xs">
-                      <span style={{ color: "var(--mevi-text-muted)" }}>
-                        Bấm mũi tên để xem từng bước.
-                      </span>
-                      <span
-                        className="rounded-full px-2.5 py-1 font-semibold"
-                        style={{
-                          color: "var(--mevi-text-secondary)",
-                          background: "rgba(236,253,245,0.8)",
-                        }}
-                      >
-                        {activeSlide + 1}/{APPLE_GUIDE_IMAGES.length}
-                      </span>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {APPLE_GUIDE_IMAGES.map((guide, index) => (
+                        <button
+                          key={guide.src}
+                          type="button"
+                          onClick={() => scrollToSlide(index)}
+                          className="h-2.5 rounded-full transition-all duration-200"
+                          style={{
+                            width: index === activeSlide ? "2rem" : "0.75rem",
+                            background:
+                              index === activeSlide
+                                ? "var(--mevi-green-700)"
+                                : "rgba(11, 122, 90, 0.22)",
+                          }}
+                          aria-label={`Chuyển đến ${guide.title}`}
+                          aria-pressed={index === activeSlide}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="text-center text-xs text-[var(--mevi-text-muted)]">
+                      Vuốt ngang để chuyển slide, hoặc chạm vào chấm bên dưới.
                     </div>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ import {
 import {
   clearAuthSession,
   setAuthSession,
+  setAuthBootstrapComplete,
 } from "@/features/auth/state/auth-session-store";
 
 export default function Providers({
@@ -60,6 +61,10 @@ export default function Providers({
         clearAuthSession();
 
         await logoutBrowserSession().catch(() => null);
+      } finally {
+        if (!isActive) return;
+
+        setAuthBootstrapComplete();
       }
     }
 

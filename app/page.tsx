@@ -230,6 +230,7 @@ export default function LoginPage() {
   const router = useRouter();
   const authSession = useAuthSession();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const isBootstrapComplete = authSession.bootstrapComplete;
 
   useEffect(() => {
     const handlePageShow = () => {
@@ -244,10 +245,10 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (authSession.status === "authenticated") {
+    if (isBootstrapComplete && authSession.status === "authenticated") {
       router.replace("/dashboard");
     }
-  }, [authSession.status, router]);
+  }, [authSession.status, isBootstrapComplete, router]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,7 +265,7 @@ export default function LoginPage() {
     <div className="mevi-portal relative flex h-dvh flex-col overflow-hidden">
       <DecorativeLeaves />
 
-      {authSession.status === "loading" ? (
+      {!isBootstrapComplete || authSession.status === "loading" ? (
         <div className="relative flex min-h-0 flex-1 items-center justify-center px-4">
           <div className="mevi-login-card flex w-full max-w-sm flex-col items-center gap-3 rounded-[24px] p-6 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-green-700" />
