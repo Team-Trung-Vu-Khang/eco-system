@@ -20,10 +20,30 @@ export type RegistrationProfileRequest = {
   operatingArea: string;
   audienceType: RegistrationAudienceType;
   audienceTypeOther?: string;
+  referrerPhoneNumber?: string;
+};
+
+export type RegistrationReferrerLookupRequest = {
+  phoneNumber: string;
+};
+
+export type RegistrationReferrerLookupItem = {
+  fullName: string;
+  phoneNumber: string;
 };
 
 function buildRegistrationUrl() {
   return new URL("/api/registrations", REGISTRATION_API_BASE).toString();
+}
+
+function buildReferrerLookupUrl(phoneNumber: string) {
+  const url = new URL(
+    "/api/registrations/referrer-lookup",
+    REGISTRATION_API_BASE,
+  );
+  url.searchParams.set("phoneNumber", phoneNumber);
+
+  return url.toString();
 }
 
 function normalizeObjectKeys<T>(input: T): T {
@@ -79,4 +99,35 @@ export async function submitRegistrationProfile(
   }
 
   return normalizeObjectKeys(responsePayload);
+}
+
+export async function lookupRegistrationReferrer(
+  payload: RegistrationReferrerLookupRequest,
+): Promise<RegistrationReferrerLookupItem[]> {
+  const phoneNumber = payload.phoneNumber.trim();
+
+  if (!phoneNumber) {
+    return [];
+  }
+
+  const response = await fetch(buildReferrerLookupUrl(phoneNumber), {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  const responsePayload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = getApiErrorMessage(responsePayload);
+
+    throw new Error(message || "Không thể tra cứu người giới thiệu.");
+  }
+
+  if (!Array.isArray(responsePayload)) {
+    return [];
+  }
+
+  return responsePayload as RegistrationReferrerLookupItem[];
 }

@@ -6,6 +6,7 @@ import {
   Loader2,
   MapPin,
   Phone,
+  Search,
   Sprout,
   X,
   User,
@@ -13,7 +14,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
@@ -21,7 +22,10 @@ import type {
   RegistrationAudienceType,
   RegistrationProfileRequest,
 } from "@/features/registration/api";
-import { useRegistrationMutation } from "@/features/registration/hooks";
+import {
+  useReferrerLookupQuery,
+  useRegistrationMutation,
+} from "@/features/registration/hooks";
 
 const audienceOptions: Array<{
   value: RegistrationAudienceType;
@@ -37,10 +41,13 @@ const audienceOptions: Array<{
 ];
 
 const DEFAULT_REGISTERED_PASSWORD = "123456";
+const REFERRER_PHONE_NUMBER_PATTERN = /^(?:\+84|0)(3|5|7|8|9)\d{8}$/;
 
 type RegistrationFormValues = {
   fullName: string;
   phoneNumber: string;
+  referrerSearchPhoneNumber: string;
+  referrerPhoneNumber: string;
   birthYear: string;
   operatingArea: string;
   audienceType: RegistrationAudienceType | "";
@@ -93,6 +100,26 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-600">{message}</p>;
 }
 
+function isValidReferrerPhoneNumber(phoneNumber: string) {
+  return REFERRER_PHONE_NUMBER_PATTERN.test(phoneNumber);
+}
+
+function normalizeReferrerPhoneNumberInput(phoneNumber: string) {
+  const digitsOnly = phoneNumber.replace(/[^\d+]/g, "").trim();
+
+  if (!digitsOnly) return "";
+
+  if (digitsOnly.startsWith("+84")) {
+    return `0${digitsOnly.slice(3)}`;
+  }
+
+  if (digitsOnly.startsWith("84") && digitsOnly.length === 11) {
+    return `0${digitsOnly.slice(2)}`;
+  }
+
+  return digitsOnly;
+}
+
 export default function RegistrationPage() {
   const router = useRouter();
   const [submittedData, setSubmittedData] =
@@ -106,11 +133,14 @@ export default function RegistrationPage() {
     handleSubmit,
     reset,
     control,
+    setValue,
     formState: { errors },
   } = useForm<RegistrationFormValues>({
     defaultValues: {
       fullName: "",
       phoneNumber: "",
+      referrerSearchPhoneNumber: "",
+      referrerPhoneNumber: "",
       birthYear: "",
       operatingArea: "",
       audienceType: "",
@@ -122,6 +152,28 @@ export default function RegistrationPage() {
     control,
     name: "audienceType",
   });
+  const referrerSearchPhoneNumber = useWatch({
+    control,
+    name: "referrerSearchPhoneNumber",
+  });
+  const referrerPhoneNumber = useWatch({
+    control,
+    name: "referrerPhoneNumber",
+  });
+  const referrerSearchBoxRef = useRef<HTMLDivElement | null>(null);
+  const normalizedReferrerSearchPhoneNumber = normalizeReferrerPhoneNumberInput(
+    referrerSearchPhoneNumber.trim(),
+  );
+  const deferredReferrerSearchPhoneNumber = useDeferredValue(
+    normalizedReferrerSearchPhoneNumber,
+  );
+  const canLookupReferrer = isValidReferrerPhoneNumber(
+    deferredReferrerSearchPhoneNumber,
+  );
+  const referrerLookupQuery = useReferrerLookupQuery(
+    canLookupReferrer ? deferredReferrerSearchPhoneNumber : null,
+  );
+  const [isReferrerDropdownOpen, setIsReferrerDropdownOpen] = useState(false);
   const isSubmittingForm = registrationMutation.isPending;
   const submittedAudienceLabel = submittedData
     ? submittedData.audienceType === "other" && submittedData.audienceTypeOther
@@ -134,6 +186,37 @@ export default function RegistrationPage() {
     router.replace("/");
   };
 
+  useEffect(() => {
+    if (!isReferrerDropdownOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        referrerSearchBoxRef.current &&
+        !referrerSearchBoxRef.current.contains(event.target as Node)
+      ) {
+        setIsReferrerDropdownOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsReferrerDropdownOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isReferrerDropdownOpen]);
+
+  const selectedReferrer = referrerLookupQuery.data?.find(
+    (item) => item.phoneNumber === referrerPhoneNumber,
+  );
+
   const onSubmit = handleSubmit(async (values) => {
     const payload: RegistrationProfileRequest = {
       fullName: values.fullName.trim(),
@@ -141,6 +224,7 @@ export default function RegistrationPage() {
       birthYear: Number(values.birthYear),
       operatingArea: values.operatingArea.trim(),
       audienceType: values.audienceType as RegistrationAudienceType,
+      referrerPhoneNumber: values.referrerPhoneNumber.trim() || undefined,
     };
 
     if (payload.audienceType === "other") {
@@ -228,6 +312,12 @@ export default function RegistrationPage() {
                   <span className="font-semibold">Nhóm đối tượng:</span>{" "}
                   {submittedAudienceLabel}
                 </p>
+                {submittedData.referrerPhoneNumber ? (
+                  <p>
+                    <span className="font-semibold">Người giới thiệu:</span>{" "}
+                    {submittedData.referrerPhoneNumber}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -443,6 +533,155 @@ export default function RegistrationPage() {
                     <FieldError message={errors.phoneNumber?.message} />
                   </div>
 
+                  <div className="space-y-1.5">
+                    <div className="relative" ref={referrerSearchBoxRef}>
+                      <label
+                        htmlFor="referrerSearchPhoneNumber"
+                        className="flex items-center gap-2 text-xs font-semibold sm:text-sm"
+                        style={{ color: "var(--mevi-text-secondary)" }}
+                      >
+                        <Search className="h-4 w-4" />
+                        3. Người giới thiệu
+                      </label>
+                      <input
+                        id="referrerSearchPhoneNumber"
+                        type="tel"
+                        inputMode="numeric"
+                        className="mevi-input"
+                        placeholder="Nhập số điện thoại đầy đủ để tìm"
+                        autoComplete="off"
+                        role="combobox"
+                        aria-autocomplete="list"
+                        aria-expanded={isReferrerDropdownOpen}
+                        aria-controls="referrer-search-dropdown"
+                        {...register("referrerSearchPhoneNumber", {
+                          onChange: (event) => {
+                            const nextValue = event.target.value?.trim() ?? "";
+                            const normalizedNextValue =
+                              normalizeReferrerPhoneNumberInput(nextValue);
+
+                            setValue("referrerPhoneNumber", "");
+                            setIsReferrerDropdownOpen(
+                              Boolean(normalizedNextValue),
+                            );
+                          },
+                        })}
+                        onFocus={(event) => {
+                          if (
+                            normalizeReferrerPhoneNumberInput(
+                              event.currentTarget.value.trim(),
+                            )
+                          ) {
+                            setIsReferrerDropdownOpen(true);
+                          }
+                        }}
+                      />
+                      <p
+                        className="text-[11px] leading-5"
+                        style={{ color: "var(--mevi-text-muted)" }}
+                      >
+                        Hệ thống chỉ khớp chính xác theo số điện thoại đầy đủ.
+                      </p>
+
+                      {selectedReferrer ? (
+                        <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-emerald-900">
+                              Đã chọn: {selectedReferrer.fullName}
+                            </p>
+                            <p className="text-[11px] text-emerald-700">
+                              {selectedReferrer.phoneNumber}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="rounded-lg px-2 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                            onClick={() => {
+                              setValue("referrerPhoneNumber", "");
+                              setValue("referrerSearchPhoneNumber", "");
+                              setIsReferrerDropdownOpen(false);
+                            }}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {isReferrerDropdownOpen && canLookupReferrer ? (
+                        <div
+                          id="referrer-search-dropdown"
+                          className="absolute left-0 right-0 top-[calc(100%-1.2rem)] z-20 overflow-hidden rounded-2xl border border-[var(--mevi-border)] bg-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.2)]"
+                        >
+                          <div className="border-b border-[var(--mevi-border)] px-3 py-2 text-[11px] font-medium text-[var(--mevi-text-muted)]">
+                            {referrerLookupQuery.isFetching
+                              ? "Đang tra cứu..."
+                              : referrerLookupQuery.isError
+                                ? "Không thể tra cứu người giới thiệu"
+                                : referrerLookupQuery.data?.length
+                                  ? `${referrerLookupQuery.data.length} kết quả phù hợp`
+                                  : "Không tìm thấy kết quả"}
+                          </div>
+
+                          {referrerLookupQuery.isError ? (
+                            <div className="px-3 py-3 text-xs text-red-600">
+                              {referrerLookupQuery.error.message}
+                            </div>
+                          ) : referrerLookupQuery.isFetching ? (
+                            <div className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--mevi-text-muted)]">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Đang tìm người giới thiệu...
+                            </div>
+                          ) : referrerLookupQuery.data?.length ? (
+                            <div className="max-h-56 overflow-y-auto p-1.5">
+                              {referrerLookupQuery.data.map((item) => (
+                                <button
+                                  key={item.phoneNumber}
+                                  type="button"
+                                  className="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50"
+                                  onClick={() => {
+                                    setValue(
+                                      "referrerPhoneNumber",
+                                      item.phoneNumber,
+                                      {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                      },
+                                    );
+                                    setValue(
+                                      "referrerSearchPhoneNumber",
+                                      item.phoneNumber,
+                                      {
+                                        shouldDirty: true,
+                                        shouldValidate: true,
+                                      },
+                                    );
+                                    setIsReferrerDropdownOpen(false);
+                                  }}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-[var(--mevi-text-primary)]">
+                                      {item.fullName}
+                                    </p>
+                                    <p className="text-xs text-[var(--mevi-text-muted)]">
+                                      {item.phoneNumber}
+                                    </p>
+                                  </div>
+                                  <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                                    Chọn
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="px-3 py-3 text-xs text-amber-700">
+                              Không tìm thấy người giới thiệu phù hợp.
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label
                       htmlFor="birthYear"
@@ -450,7 +689,7 @@ export default function RegistrationPage() {
                       style={{ color: "var(--mevi-text-secondary)" }}
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      3. Năm sinh
+                      4. Năm sinh
                     </label>
                     <input
                       id="birthYear"
@@ -484,7 +723,7 @@ export default function RegistrationPage() {
                       style={{ color: "var(--mevi-text-secondary)" }}
                     >
                       <MapPin className="h-4 w-4" />
-                      4. Địa chỉ khu vực bạn đang hoạt động (Tỉnh/Thành phố)
+                      5. Địa chỉ khu vực bạn đang hoạt động (Tỉnh/Thành phố)
                     </label>
                     <input
                       id="operatingArea"
@@ -507,7 +746,7 @@ export default function RegistrationPage() {
                       className="text-xs font-semibold sm:text-sm"
                       style={{ color: "var(--mevi-text-secondary)" }}
                     >
-                      5. Bạn thuộc nhóm đối tượng nào?
+                      6. Bạn thuộc nhóm đối tượng nào?
                     </p>
 
                     <div className="grid gap-1.5 rounded-xl border border-[var(--mevi-border)] bg-white/60 p-2.5">

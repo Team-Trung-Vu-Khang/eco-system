@@ -6,6 +6,8 @@ import {
   Factory,
   ShoppingBag,
   ArrowRight,
+  ExternalLink,
+  ChevronDown,
   LogOut,
   Loader2,
   LockKeyhole,
@@ -13,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SurveyBranchConfirmModal } from "@/app/survey/_components/survey-branch-confirm-modal";
 import { AppInstallControl } from "@/components/app-install-control";
@@ -148,6 +150,12 @@ function getUserInitials(displayName: string) {
   return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
 }
 
+function hasSuperAdminRole(profile: {
+  roles?: string[] | null;
+} | null) {
+  return Boolean(profile?.roles?.includes("MEVI_SUPER_ADMIN"));
+}
+
 /* ===== Decorative Leaves ===== */
 
 function DecorativeLeaves() {
@@ -199,13 +207,17 @@ export default function DashboardPage() {
     null,
   );
   const [loadingModuleId, setLoadingModuleId] = useState<string | null>(null);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [pendingSurveyModule, setPendingSurveyModule] =
     useState<BranchModule | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const isLoggingOut = logoutMutation.isPending;
   const isChangingPassword = changePasswordMutation.isPending;
   const profile = authMeQuery.data ?? authSession.profile;
   const mustChangePassword = Boolean(profile?.mustChangePassword);
+  const canOpenAdminCenter = hasSuperAdminRole(profile);
   const displayName = getDisplayName(profile ?? {});
+  const userPhoneNumber = profile?.phoneNumber?.trim() || "Chưa có SĐT";
   const userInitials = getUserInitials(displayName);
   const {
     register: registerPasswordField,
@@ -246,6 +258,33 @@ export default function DashboardPage() {
 
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isAccountMenuOpen]);
 
   useEffect(() => {
     const clearModuleLoading = () => {
@@ -356,6 +395,7 @@ export default function DashboardPage() {
     if (isLoggingOut) return;
 
     setToastMessage(null);
+    setIsAccountMenuOpen(false);
 
     const token = accessToken;
     let didLogoutRemote = false;
@@ -620,38 +660,120 @@ export default function DashboardPage() {
           rightSlot={
             <>
               <AppInstallControl />
-              <div
-                className="flex min-w-0 items-center gap-2 text-sm"
-                style={{ color: "var(--mevi-text-secondary)" }}
-              >
-                <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
-                  }}
+              <div className="relative shrink-0" ref={accountMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsAccountMenuOpen((value) => !value)}
+                  aria-haspopup="menu"
+                  aria-expanded={isAccountMenuOpen}
+                  className="group flex min-w-0 items-center gap-2 rounded-full bg-transparent px-0 py-0 text-left transition-opacity duration-200 hover:opacity-80"
+                  style={{ color: "var(--mevi-text-secondary)" }}
                 >
-                  {userInitials}
-                </div>
-                <span className="truncate font-medium">{displayName}</span>
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--mevi-green-500), var(--mevi-green-700))",
+                    }}
+                  >
+                    {userInitials}
+                  </div>
+                  <span className="min-w-0 text-left leading-tight">
+                    <span className="block truncate text-sm font-semibold">
+                      {displayName}
+                    </span>
+                    <span
+                      className="block text-[10px] font-medium"
+                      style={{ color: "var(--mevi-text-muted)" }}
+                    >
+                      {userPhoneNumber}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={`ml-0.5 h-4 w-4 shrink-0 transition-transform duration-200 ${isAccountMenuOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isAccountMenuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-emerald-100 bg-white/95 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.22)] backdrop-blur-md">
+                    <div className="border-b border-emerald-50/70 px-3.5 py-3">
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--mevi-text-primary)" }}
+                      >
+                        {displayName}
+                      </p>
+                      <p
+                        className="mt-0.5 text-xs"
+                        style={{ color: "var(--mevi-text-muted)" }}
+                      >
+                        Quản lý tài khoản MEVI
+                      </p>
+                    </div>
+
+                    <div className="p-1.5">
+                      {canOpenAdminCenter ? (
+                        <a
+                          href="https://eco-system-admin.vercel.app/"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => setIsAccountMenuOpen(false)}
+                          className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-emerald-50"
+                          style={{ color: "var(--mevi-text-primary)" }}
+                          title="Mở Mevi Center Admin"
+                          aria-label="Mở Mevi Center Admin"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 transition-transform duration-200 group-hover:scale-105">
+                            <ShieldCheck className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold">
+                              Mevi Center Admin
+                            </span>
+                            <span
+                              className="mt-0.5 flex items-center gap-1 text-xs"
+                              style={{ color: "var(--mevi-text-muted)" }}
+                            >
+                              Mở tab mới
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </span>
+                          </span>
+                        </a>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-red-50 disabled:pointer-events-none disabled:opacity-60"
+                        style={{ color: "var(--mevi-text-primary)" }}
+                        title="Thoát"
+                      >
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 ring-1 ring-red-100"
+                        >
+                          {isLoggingOut ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <LogOut className="h-4 w-4" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold">
+                            {isLoggingOut ? "Đang thoát..." : "Thoát"}
+                          </span>
+                          <span
+                            className="block text-xs"
+                            style={{ color: "var(--mevi-text-muted)" }}
+                          >
+                            Rời khỏi phiên đăng nhập
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-60"
-                style={{
-                  color: "var(--mevi-text-muted)",
-                }}
-                title="Thoát"
-              >
-                {isLoggingOut ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <LogOut className="h-4 w-4" />
-                )}
-                <span>{isLoggingOut ? "Đang thoát..." : "Thoát"}</span>
-              </button>
             </>
           }
         />

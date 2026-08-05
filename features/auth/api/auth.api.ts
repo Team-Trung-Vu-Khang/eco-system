@@ -10,6 +10,8 @@ export type AuthMeProfile = {
   provider?: string | null;
   sessionId?: string | null;
   companyId?: string | number | null;
+  role?: string | null;
+  roles?: string[] | null;
   mustChangePassword?: boolean | null;
 };
 
