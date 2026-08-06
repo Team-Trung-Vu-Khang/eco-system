@@ -41,8 +41,6 @@ const audienceOptions: Array<{
 ];
 
 const DEFAULT_REGISTERED_PASSWORD = "123456";
-const REFERRER_PHONE_NUMBER_PATTERN = /^(?:\+84|0)(3|5|7|8|9)\d{8}$/;
-
 type RegistrationFormValues = {
   fullName: string;
   phoneNumber: string;
@@ -100,10 +98,6 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-red-600">{message}</p>;
 }
 
-function isValidReferrerPhoneNumber(phoneNumber: string) {
-  return REFERRER_PHONE_NUMBER_PATTERN.test(phoneNumber);
-}
-
 function normalizeReferrerPhoneNumberInput(phoneNumber: string) {
   const digitsOnly = phoneNumber.replace(/[^\d+]/g, "").trim();
 
@@ -118,6 +112,12 @@ function normalizeReferrerPhoneNumberInput(phoneNumber: string) {
   }
 
   return digitsOnly;
+}
+
+function canLookupReferrerPhoneNumber(phoneNumber: string) {
+  const digitsOnly = phoneNumber.replace(/\D/g, "");
+
+  return digitsOnly.length >= 6;
 }
 
 export default function RegistrationPage() {
@@ -167,7 +167,7 @@ export default function RegistrationPage() {
   const deferredReferrerSearchPhoneNumber = useDeferredValue(
     normalizedReferrerSearchPhoneNumber,
   );
-  const canLookupReferrer = isValidReferrerPhoneNumber(
+  const canLookupReferrer = canLookupReferrerPhoneNumber(
     deferredReferrerSearchPhoneNumber,
   );
   const referrerLookupQuery = useReferrerLookupQuery(
@@ -533,7 +533,7 @@ export default function RegistrationPage() {
                     <FieldError message={errors.phoneNumber?.message} />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 relative">
                     <div className="relative" ref={referrerSearchBoxRef}>
                       <label
                         htmlFor="referrerSearchPhoneNumber"
@@ -548,7 +548,7 @@ export default function RegistrationPage() {
                         type="tel"
                         inputMode="numeric"
                         className="mevi-input"
-                        placeholder="Nhập số điện thoại đầy đủ để tìm"
+                        placeholder="Nhập 6-7 số đầu để tìm"
                         autoComplete="off"
                         role="combobox"
                         aria-autocomplete="list"
@@ -576,15 +576,9 @@ export default function RegistrationPage() {
                           }
                         }}
                       />
-                      <p
-                        className="text-[11px] leading-5"
-                        style={{ color: "var(--mevi-text-muted)" }}
-                      >
-                        Hệ thống chỉ khớp chính xác theo số điện thoại đầy đủ.
-                      </p>
 
                       {selectedReferrer ? (
-                        <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2 mt-1">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-semibold text-emerald-900">
                               Đã chọn: {selectedReferrer.fullName}
@@ -610,7 +604,7 @@ export default function RegistrationPage() {
                       {isReferrerDropdownOpen && canLookupReferrer ? (
                         <div
                           id="referrer-search-dropdown"
-                          className="absolute left-0 right-0 top-[calc(100%-1.2rem)] z-20 overflow-hidden rounded-2xl border border-[var(--mevi-border)] bg-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.2)]"
+                          className="absolute left-0 right-0 top-16 z-20 overflow-hidden rounded-2xl border border-[var(--mevi-border)] bg-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.2)]"
                         >
                           <div className="border-b border-[var(--mevi-border)] px-3 py-2 text-[11px] font-medium text-[var(--mevi-text-muted)]">
                             {referrerLookupQuery.isFetching
@@ -624,7 +618,7 @@ export default function RegistrationPage() {
 
                           {referrerLookupQuery.isError ? (
                             <div className="px-3 py-3 text-xs text-red-600">
-                              {referrerLookupQuery.error.message}
+                              Vui lòng nhập số điện thoại khác
                             </div>
                           ) : referrerLookupQuery.isFetching ? (
                             <div className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--mevi-text-muted)]">
