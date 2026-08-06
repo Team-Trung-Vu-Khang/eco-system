@@ -19,6 +19,7 @@ export type RegistrationProfileRequest = {
   birthYear: number;
   province: string;
   commune: string;
+  operatingArea?: string;
   audienceType: RegistrationAudienceType;
   audienceTypeOther?: string;
   referrerPhoneNumber?: string;
@@ -94,6 +95,7 @@ export async function submitRegistrationProfile(
     phoneNumber: payload.phoneNumber.trim(),
     province: payload.province.trim(),
     commune: payload.commune.trim(),
+    operatingArea: payload.operatingArea?.trim() || undefined,
     audienceTypeOther: payload.audienceTypeOther?.trim() || undefined,
     referrerPhoneNumber: payload.referrerPhoneNumber?.trim() || undefined,
   };

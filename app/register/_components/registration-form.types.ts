@@ -10,6 +10,7 @@ export type RegistrationFormValues = {
   provinceCode: string;
   wardSearchKeyword: string;
   commune: string;
+  operatingArea: string;
   audienceType: RegistrationAudienceType | "";
   audienceTypeOther: string;
 };

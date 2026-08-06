@@ -50,6 +50,7 @@ export function RegistrationForm() {
       provinceCode: "",
       wardSearchKeyword: "",
       commune: "",
+      operatingArea: "",
       audienceType: "",
       audienceTypeOther: "",
     },
@@ -68,6 +69,7 @@ export function RegistrationForm() {
       birthYear: Number(values.birthYear),
       province: values.provinceSearchKeyword.trim(),
       commune: values.commune.trim(),
+      operatingArea: values.operatingArea.trim() || undefined,
       audienceType: values.audienceType as RegistrationAudienceType,
       referrerPhoneNumber: values.referrerPhoneNumber.trim() || undefined,
     };

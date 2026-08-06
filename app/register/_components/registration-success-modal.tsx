@@ -85,6 +85,12 @@ export function RegistrationSuccessModal({
                 <span className="font-semibold">Phường/Xã:</span>{" "}
                 {submittedData.commune}
               </p>
+              {submittedData.operatingArea ? (
+                <p>
+                  <span className="font-semibold">Khu vực hoạt động:</span>{" "}
+                  {submittedData.operatingArea}
+                </p>
+              ) : null}
               <p>
                 <span className="font-semibold">Nhóm đối tượng:</span>{" "}
                 {submittedAudienceLabel}

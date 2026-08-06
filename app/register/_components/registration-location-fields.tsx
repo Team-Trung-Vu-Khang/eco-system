@@ -4,6 +4,7 @@ import { Loader2, MapPin } from "lucide-react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FieldError } from "./field-error";
+import { RequiredMark } from "./required-mark";
 import type { RegistrationFormValues } from "./registration-form.types";
 import { useProvincesQuery, useWardsQuery } from "@/features/master-data/geo";
 
@@ -124,7 +125,8 @@ export function RegistrationLocationFields() {
       <input
         type="hidden"
         {...register("commune", {
-          validate: (value) => (value.trim() ? true : "Vui lòng chọn phường/xã."),
+          validate: (value) =>
+            value.trim() ? true : "Vui lòng chọn phường/xã.",
         })}
       />
 
@@ -136,6 +138,7 @@ export function RegistrationLocationFields() {
         >
           <MapPin className="h-4 w-4" />
           5. Tỉnh/Thành phố
+          <RequiredMark />
         </label>
         <input
           id="provinceSearchKeyword"
@@ -222,7 +225,9 @@ export function RegistrationLocationFields() {
             </div>
 
             {provincesQuery.isError ? (
-              <div className="px-3 py-3 text-xs text-red-600">Vui lòng thử lại</div>
+              <div className="px-3 py-3 text-xs text-red-600">
+                Vui lòng thử lại
+              </div>
             ) : provincesQuery.isFetching ? (
               <div className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--mevi-text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -287,6 +292,7 @@ export function RegistrationLocationFields() {
         >
           <MapPin className="h-4 w-4" />
           6. Phường / Xã
+          <RequiredMark />
         </label>
         <input
           id="wardSearchKeyword"
@@ -326,7 +332,9 @@ export function RegistrationLocationFields() {
               <p className="truncate text-xs font-semibold text-emerald-900">
                 Đã chọn: {selectedWard.fullName}
               </p>
-              <p className="text-[11px] text-emerald-700">{selectedWard.code}</p>
+              <p className="text-[11px] text-emerald-700">
+                {selectedWard.code}
+              </p>
             </div>
             <button
               type="button"
@@ -361,7 +369,9 @@ export function RegistrationLocationFields() {
             </div>
 
             {wardsQuery.isError ? (
-              <div className="px-3 py-3 text-xs text-red-600">Vui lòng thử lại</div>
+              <div className="px-3 py-3 text-xs text-red-600">
+                Vui lòng thử lại
+              </div>
             ) : wardsQuery.isFetching ? (
               <div className="flex items-center gap-2 px-3 py-3 text-xs text-[var(--mevi-text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -407,6 +417,30 @@ export function RegistrationLocationFields() {
             )}
           </div>
         ) : null}
+      </div>
+
+      <div className="space-y-1">
+        <label
+          htmlFor="operatingArea"
+          className="flex items-center gap-2 text-xs font-semibold sm:text-sm"
+          style={{ color: "var(--mevi-text-secondary)" }}
+        >
+          <MapPin className="h-4 w-4" />
+          7. Địa chỉ khu vực bạn đang hoạt động
+        </label>
+        <input
+          id="operatingArea"
+          type="text"
+          className="mevi-input"
+          placeholder="Ví dụ: Thôn 1, xã Ea Tu, huyện Cư M'gar"
+          {...register("operatingArea", {
+            maxLength: {
+              value: 150,
+              message: "Khu vực hoạt động tối đa 150 ký tự.",
+            },
+          })}
+        />
+        <FieldError message={errors.operatingArea?.message} />
       </div>
     </>
   );

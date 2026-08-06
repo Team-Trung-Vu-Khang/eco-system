@@ -4,6 +4,7 @@ import { Loader2, Search } from "lucide-react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FieldError } from "./field-error";
+import { RequiredMark } from "./required-mark";
 import type { RegistrationFormValues } from "./registration-form.types";
 import { useReferrerLookupQuery } from "@/features/registration/hooks";
 
@@ -124,6 +125,7 @@ export function RegistrationReferrerField() {
         >
           <Search className="h-4 w-4" />
           3. Người giới thiệu
+          <RequiredMark />
         </label>
         <input
           id="referrerSearchPhoneNumber"

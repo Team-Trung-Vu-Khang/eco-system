@@ -3,6 +3,7 @@
 import { CheckCircle2, Phone, User } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { FieldError } from "./field-error";
+import { RequiredMark } from "./required-mark";
 import type { RegistrationFormValues } from "./registration-form.types";
 
 export function RegistrationBasicFields({
@@ -25,6 +26,7 @@ export function RegistrationBasicFields({
         >
           <User className="h-4 w-4" />
           1. Họ và tên của bạn
+          <RequiredMark />
         </label>
         <input
           id="fullName"
@@ -50,6 +52,7 @@ export function RegistrationBasicFields({
         >
           <Phone className="h-4 w-4" />
           2. Số điện thoại
+          <RequiredMark />
         </label>
         <input
           id="phoneNumber"
@@ -80,6 +83,7 @@ export function RegistrationBasicFields({
         >
           <CheckCircle2 className="h-4 w-4" />
           4. Năm sinh
+          <RequiredMark />
         </label>
         <input
           id="birthYear"
@@ -89,7 +93,13 @@ export function RegistrationBasicFields({
           {...register("birthYear", {
             required: "Vui lòng nhập năm sinh.",
             validate: (value) => {
-              const year = Number(value);
+              const inputValue = String(value ?? "").trim();
+
+              if (!inputValue) {
+                return "Vui lòng nhập năm sinh.";
+              }
+
+              const year = Number(inputValue);
 
               if (!Number.isInteger(year)) {
                 return "Năm sinh không hợp lệ.";

@@ -3,6 +3,7 @@
 import { CheckCircle2 } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FieldError } from "./field-error";
+import { RequiredMark } from "./required-mark";
 import type { RegistrationFormValues } from "./registration-form.types";
 
 const audienceOptions: Array<{
@@ -35,7 +36,8 @@ export function RegistrationAudienceSection() {
         className="text-xs font-semibold sm:text-sm"
         style={{ color: "var(--mevi-text-secondary)" }}
       >
-        7. Bạn thuộc nhóm đối tượng nào?
+        8. Bạn thuộc nhóm đối tượng nào?
+        <RequiredMark />
       </p>
 
       <div className="grid gap-1.5 rounded-xl border border-[var(--mevi-border)] bg-white/60 p-2.5">
@@ -69,6 +71,7 @@ export function RegistrationAudienceSection() {
           >
             <CheckCircle2 className="h-4 w-4" />
             Vui lòng mô tả nhóm đối tượng khác
+            <RequiredMark />
           </label>
           <input
             id="audienceTypeOther"
