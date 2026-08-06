@@ -41,6 +41,7 @@ const audienceOptions: Array<{
 ];
 
 const DEFAULT_REGISTERED_PASSWORD = "123456";
+export const vietnamMobilePhoneRegex = /^(?:\+?84|0)(3|5|7|8|9)\d{8}$/;
 type RegistrationFormValues = {
   fullName: string;
   phoneNumber: string;
@@ -120,6 +121,23 @@ function canLookupReferrerPhoneNumber(phoneNumber: string) {
   return digitsOnly.length >= 6;
 }
 
+function validateReferrerSearchPhoneNumber(phoneNumber: string) {
+  const normalizedPhoneNumber = normalizeReferrerPhoneNumberInput(
+    phoneNumber.trim(),
+  );
+  const digitsOnly = normalizedPhoneNumber.replace(/\D/g, "");
+
+  if (!digitsOnly) {
+    return true;
+  }
+
+  if (digitsOnly.length < 6) {
+    return "Vui lòng nhập ít nhất 6 số để tra cứu.";
+  }
+
+  return true;
+}
+
 export default function RegistrationPage() {
   const router = useRouter();
   const [submittedData, setSubmittedData] =
@@ -146,6 +164,10 @@ export default function RegistrationPage() {
       audienceType: "",
       audienceTypeOther: "",
     },
+  });
+  const referrerPhoneNumberField = register("referrerPhoneNumber", {
+    validate: (value) =>
+      value.trim() ? true : "Vui lòng chọn người giới thiệu.",
   });
 
   const selectedAudienceType = useWatch({
@@ -525,13 +547,15 @@ export default function RegistrationPage() {
                           message: "Số điện thoại tối đa 32 ký tự.",
                         },
                         pattern: {
-                          value: /^(?:\+84|0)(3|5|7|8|9)\d{8}$/,
-                          message: "Số điện thoại chưa đúng định dạng.",
+                          value: vietnamMobilePhoneRegex,
+                          message: "Vui lòng nhập số điện thoại hợp lệ.",
                         },
                       })}
                     />
                     <FieldError message={errors.phoneNumber?.message} />
                   </div>
+
+                  <input type="hidden" {...referrerPhoneNumberField} />
 
                   <div className="space-y-1.5 relative">
                     <div className="relative" ref={referrerSearchBoxRef}>
@@ -555,12 +579,16 @@ export default function RegistrationPage() {
                         aria-expanded={isReferrerDropdownOpen}
                         aria-controls="referrer-search-dropdown"
                         {...register("referrerSearchPhoneNumber", {
+                          validate: validateReferrerSearchPhoneNumber,
                           onChange: (event) => {
                             const nextValue = event.target.value?.trim() ?? "";
                             const normalizedNextValue =
                               normalizeReferrerPhoneNumberInput(nextValue);
 
-                            setValue("referrerPhoneNumber", "");
+                            setValue("referrerPhoneNumber", "", {
+                              shouldDirty: true,
+                              shouldValidate: false,
+                            });
                             setIsReferrerDropdownOpen(
                               Boolean(normalizedNextValue),
                             );
@@ -575,6 +603,12 @@ export default function RegistrationPage() {
                             setIsReferrerDropdownOpen(true);
                           }
                         }}
+                      />
+                      <FieldError
+                        message={errors.referrerSearchPhoneNumber?.message}
+                      />
+                      <FieldError
+                        message={errors.referrerPhoneNumber?.message}
                       />
 
                       {selectedReferrer ? (
@@ -591,7 +625,10 @@ export default function RegistrationPage() {
                             type="button"
                             className="rounded-lg px-2 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
                             onClick={() => {
-                              setValue("referrerPhoneNumber", "");
+                              setValue("referrerPhoneNumber", "", {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
                               setValue("referrerSearchPhoneNumber", "");
                               setIsReferrerDropdownOpen(false);
                             }}
