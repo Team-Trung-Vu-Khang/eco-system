@@ -319,8 +319,8 @@ function AuthCallbackContent() {
                 {...registerPasswordField("newPassword", {
                   required: "Vui lòng nhập mật khẩu mới.",
                   minLength: {
-                    value: 6,
-                    message: "Mật khẩu cần có ít nhất 6 ký tự.",
+                    value: 8,
+                    message: "Mật khẩu cần có ít nhất 8 ký tự.",
                   },
                 })}
               />
