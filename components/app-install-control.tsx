@@ -529,5 +529,7 @@ export function AppInstallControl() {
       {dialog}
       {androidHint}
     </>
-  ) : null;
+  ) : (
+    <div />
+  );
 }
