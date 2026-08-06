@@ -2,6 +2,7 @@
 
 import { MeviPortalFooter } from "@/components/mevi-portal-footer";
 import { MeviPortalHeader } from "@/components/mevi-portal-header";
+import { AppInstallControl } from "@/components/app-install-control";
 import {
   ArrowRight,
   BookOpen,
@@ -297,7 +298,11 @@ export default function LoginPage() {
 
           <main className="relative z-10 flex w-full flex-1 items-center px-4 pb-6 pt-2 sm:px-6 sm:pt-4 md:px-10 md:pb-8 lg:px-14">
             <section className="mx-auto grid w-full max-w-6xl items-center gap-5 sm:gap-6 md:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] md:gap-10 lg:gap-14">
-              <div className="mx-auto w-full max-w-2xl text-center md:mx-0 md:text-left">
+              <div className="relative mx-auto w-full max-w-2xl text-center md:mx-0 md:text-left">
+                <div className="absolute right-0 top-0 z-20 translate-x-1/4 -translate-y-1/4 sm:right-2 sm:top-2 sm:translate-x-0 sm:translate-y-0">
+                  <AppInstallControl />
+                </div>
+
                 <div
                   className="opacity-0 animate-fade-in-up delay-100"
                   style={{ animationFillMode: "forwards" }}
